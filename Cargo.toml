@@ -23,7 +23,7 @@ config = { version = "0.15.11", default-features = false, features= ["ini"] }
 env_logger = { version="0.11.6", default-features = false, features = ["humantime", "auto-color"] }
 log = "0.4.27"
 clap = { version = "4.5.40", default-features = false, features = ["std", "help", "derive"] }
-minreq = { version = "2.13.4", default-features = false, features= ["json-using-serde", "https-rustls"] }
+minreq = { version = "2.14.0", default-features = false, features= ["json-using-serde", "https-rustls"] }
 
 [dev-dependencies]
 cross = "0.2.5"
