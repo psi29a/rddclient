@@ -431,4 +431,44 @@ host2.example.com
         assert_eq!(parsed.configs[0].ssl, Some(true));
         assert_eq!(parsed.configs[1].ssl, Some(false));
     }
+
+    #[test]
+    fn test_parse_interval() {
+        assert_eq!(parse_interval("30s").unwrap(), 30);
+        assert_eq!(parse_interval("5m").unwrap(), 300);
+        assert_eq!(parse_interval("2h").unwrap(), 7200);
+        assert_eq!(parse_interval("1d").unwrap(), 86400);
+        assert_eq!(parse_interval("25d").unwrap(), 2160000);
+        assert!(parse_interval("invalid").is_err());
+        assert!(parse_interval("").is_err());
+    }
+}
+
+/// Parse interval string (e.g., "30s", "5m", "1h", "25d") to seconds
+/// ddclient-compatible format
+pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
+    if interval.is_empty() {
+        return Err("Interval cannot be empty".into());
+    }
+
+    let interval = interval.trim();
+    let len = interval.len();
+    
+    if len < 2 {
+        return Err(format!("Invalid interval format: '{}'", interval).into());
+    }
+
+    let (num_str, unit) = interval.split_at(len - 1);
+    let num: u64 = num_str.parse()
+        .map_err(|_| format!("Invalid number in interval: '{}'", num_str))?;
+
+    let seconds = match unit {
+        "s" => num,
+        "m" => num * 60,
+        "h" => num * 3600,
+        "d" => num * 86400,
+        _ => return Err(format!("Invalid interval unit '{}'. Use s, m, h, or d", unit).into()),
+    };
+
+    Ok(seconds)
 }

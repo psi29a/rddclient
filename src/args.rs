@@ -78,6 +78,18 @@ pub struct Args {
     /// Web service URL for IP detection (use with --use=web) - ddclient compatible
     #[arg(long)]
     pub web: Option<String>,
+
+    /// Minimum interval between updates (e.g., 30s, 5m, 1h) - ddclient compatible
+    #[arg(long)]
+    pub min_interval: Option<String>,
+
+    /// Maximum interval between forced updates (e.g., 25d, 30d) - ddclient compatible
+    #[arg(long)]
+    pub max_interval: Option<String>,
+
+    /// Minimum interval between update attempts after an error (e.g., 5m, 10m) - ddclient compatible
+    #[arg(long)]
+    pub min_error_interval: Option<String>,
 }
 
 impl Args {

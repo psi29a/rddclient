@@ -140,6 +140,21 @@ rddclient --file myconfig.conf --use-method web --web https://api64.ipify.org
 rddclient --file myconfig.conf --ip 203.0.113.42
 ```
 
+### Rate Limiting
+
+```bash
+# Customize update intervals (default: min=30s, max=25d, error=5m)
+rddclient --file myconfig.conf --min-interval 5m --max-interval 30d
+
+# Prevent rapid retries after errors
+rddclient --file myconfig.conf --min-error-interval 10m
+
+# Force update regardless of intervals
+rddclient --file myconfig.conf --force
+```
+
+Interval formats: `30s` (seconds), `5m` (minutes), `2h` (hours), `25d` (days)
+
 ## Documentation
 
 - [`docs/parity.md`](docs/parity.md) - Feature parity with ddclient
@@ -269,10 +284,10 @@ See [`docs/parity.md`](docs/parity.md) for complete feature parity tracking with
 - ✅ State management & IP change detection (v0.6.0)
 - ✅ `--cache` file support for persistent state
 - ✅ Advanced IP detection (v0.6.0): `--use-method`, `--if-name`, `--cmd`, `--web`
+- ✅ Rate limiting (v0.6.0): `--min-interval`, `--max-interval`, `--min-error-interval`
 
 **In Progress:**
 - Daemon mode with `--daemon` flag
-- Rate limiting (`--min-interval`, `--max-interval`)
 
 **Planned:**
 - Email notifications

@@ -52,6 +52,22 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cache_path = args.cache.as_ref().map(std::path::PathBuf::from);
     let mut state_manager = state::StateManager::new(cache_path)?;
 
+    // Parse rate limiting intervals (defaults match ddclient)
+    let min_interval = args.min_interval.as_deref()
+        .map(config::parse_interval)
+        .transpose()?
+        .or(Some(30)); // Default: 30 seconds
+    
+    let max_interval = args.max_interval.as_deref()
+        .map(config::parse_interval)
+        .transpose()?
+        .or(Some(25 * 86400)); // Default: 25 days
+    
+    let min_error_interval = args.min_error_interval.as_deref()
+        .map(config::parse_interval)
+        .transpose()?
+        .or(Some(300)); // Default: 5 minutes
+
     // Determine IP detection method
     let detection_method = if let Some(ip_str) = config.ip.as_deref() {
         ip::IpDetectionMethod::Manual(ip_str.to_string())
@@ -91,15 +107,30 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Update each DNS record
     for hostname in config.dns_records() {
-        // Check if IP has changed (unless --force is used)
+        // Check if IP has changed
         let host_state = state_manager.get(&hostname);
-        if !args.force {
-            if let Some(state) = host_state {
-                if !state.ip_changed(ip) {
-                    log::info!("{}: IP hasn't changed ({}), skipping update", hostname, ip);
-                    continue;
-                }
+        let ip_changed = host_state.map_or(true, |state| state.ip_changed(ip));
+        
+        // Check rate limits
+        let (should_update, skip_reason) = state_manager.should_update(
+            &hostname,
+            ip_changed,
+            args.force,
+            min_interval,
+            max_interval,
+            min_error_interval,
+        );
+        
+        if !should_update {
+            if let Some(reason) = skip_reason {
+                log::info!("{}: {}", hostname, reason);
             }
+            continue;
+        }
+        
+        // Log if update was forced
+        if let Some(reason) = skip_reason {
+            log::info!("{}: {}", hostname, reason);
         }
         
         if test {
