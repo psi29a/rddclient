@@ -249,9 +249,10 @@ See [`docs/parity.md`](docs/parity.md) for complete feature parity tracking with
 - ✅ Full IPv6 support (all 53 providers)
 - ✅ `--force` flag for forced updates
 - ✅ ddclient config file compatibility
+- ✅ State management & IP change detection (v0.6.0)
+- ✅ `--cache` file support for persistent state
 
 **In Progress:**
-- State management & IP change detection
 - Daemon mode with `--daemon` flag
 - Rate limiting (`--min-interval`, `--max-interval`)
 

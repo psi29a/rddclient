@@ -1,6 +1,6 @@
 [package]
 name = "rddclient"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["Bret Curtis <psi29a@gmail.com>"]
 description = "Fast, lightweight multi-provider Dynamic DNS updater supporting Cloudflare, DynDNS2, Namecheap, and more"
 license = "GPLv3"
@@ -24,7 +24,9 @@ log = "0.4.29"
 clap = { version = "4.5.53", default-features = false, features = ["std", "help", "derive"] }
 minreq = { version = "2.14.1", default-features = false, features= ["json-using-serde", "https-rustls"] }
 base64 = "0.22"
+dirs = "5.0"
 
 [dev-dependencies]
 cross = "0.2.5"
 mockito = "1.7.1"
+tempfile = "3.14"

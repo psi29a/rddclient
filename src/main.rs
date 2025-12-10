@@ -2,6 +2,7 @@ mod args;
 mod clients;
 mod config;
 mod ip;
+mod state;
 
 use clap::CommandFactory;
 use std::error::Error;
@@ -47,6 +48,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     log::info!("Starting {} DNS updater...", protocol);
 
+    // Initialize state management
+    let cache_path = args.cache.as_ref().map(std::path::PathBuf::from);
+    let mut state_manager = state::StateManager::new(cache_path)?;
+
     // Get IP address
     let ip = ip::get_ip(config.ip.as_deref())?;
     log::info!("IP address: {}", ip);
@@ -59,16 +64,40 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Update each DNS record
     for hostname in config.dns_records() {
+        // Check if IP has changed (unless --force is used)
+        let host_state = state_manager.get(&hostname);
+        if !args.force {
+            if let Some(state) = host_state {
+                if !state.ip_changed(ip) {
+                    log::info!("{}: IP hasn't changed ({}), skipping update", hostname, ip);
+                    continue;
+                }
+            }
+        }
+        
         if test {
             log::info!("TEST MODE: Would update {} to {}", hostname, ip);
             continue;
         }
 
         match client.update_record(&hostname, ip) {
-            Ok(_) => log::info!("Successfully updated {}", hostname),
-            Err(e) => log::error!("Failed to update {}: {}", hostname, e),
+            Ok(_) => {
+                log::info!("Successfully updated {}", hostname);
+                // Update state with success
+                let state = state_manager.get_mut(&hostname);
+                state.update_success(ip, "good".to_string());
+            }
+            Err(e) => {
+                log::error!("Failed to update {}: {}", hostname, e);
+                // Update state with failure
+                let state = state_manager.get_mut(&hostname);
+                state.update_failure(e.to_string());
+            }
         }
     }
+
+    // Save state to cache file
+    state_manager.save()?;
 
     Ok(())
 }

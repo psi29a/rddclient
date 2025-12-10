@@ -39,6 +39,10 @@ pub struct Args {
     #[arg(long)]
     pub file: Option<String>,
 
+    /// Cache file path for storing state (default: /var/cache/rddclient/rddclient.cache) - ddclient compatible
+    #[arg(long)]
+    pub cache: Option<String>,
+
     /// Test mode - validate config and show what would happen without updating (ddclient compatible)
     #[arg(long, default_value = "false")]
     pub test: bool,
