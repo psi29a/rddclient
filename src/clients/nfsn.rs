@@ -132,9 +132,15 @@ impl DnsClient for NfsnClient {
 
         let name = self.extract_name(hostname);
         
-        // Step 1: List existing A records for this name
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
+        
+        // Step 1: List existing records for this name
         let list_path = format!("/dns/{}/listRRs", self.zone);
-        let list_body = format!("name={}&type=A", urlencoding::encode(&name));
+        let list_body = format!("name={}&type={}", urlencoding::encode(&name), record_type);
         let list_resp = self.make_request(&list_path, "POST", &list_body)?;
         
         log::debug!("List response: {}", list_resp);
@@ -145,11 +151,12 @@ impl DnsClient for NfsnClient {
         // Step 2: If record exists, remove it first
         if let Some(record) = records.first() {
             if let Some(old_ip) = record.get("data").and_then(|d| d.as_str()) {
-                log::info!("Removing old record: {} -> {}", name, old_ip);
+                log::info!("Removing old {} record: {} -> {}", record_type, name, old_ip);
                 let rm_path = format!("/dns/{}/removeRR", self.zone);
                 let rm_body = format!(
-                    "name={}&type=A&data={}",
+                    "name={}&type={}&data={}",
                     urlencoding::encode(&name),
+                    record_type,
                     urlencoding::encode(old_ip)
                 );
                 self.make_request(&rm_path, "POST", &rm_body)?;
@@ -157,16 +164,17 @@ impl DnsClient for NfsnClient {
         }
         
         // Step 3: Add new record
-        log::info!("Adding new record: {} -> {}", name, ip);
+        log::info!("Adding new {} record: {} -> {}", record_type, name, ip);
         let add_path = format!("/dns/{}/addRR", self.zone);
         let add_body = format!(
-            "name={}&type=A&data={}&ttl=3600",
+            "name={}&type={}&data={}&ttl=3600",
             urlencoding::encode(&name),
+            record_type,
             ip
         );
         self.make_request(&add_path, "POST", &add_body)?;
         
-        log::info!("Successfully updated {} to {}", hostname, ip);
+        log::info!("Successfully updated {} to {} ({})", hostname, ip, record_type);
         Ok(())
     }
 

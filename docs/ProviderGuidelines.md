@@ -228,14 +228,32 @@ let url = format!("{}?token={}&hostname={}&ip={}",
 Always provide clear error messages:
 
 ```rust
-// Parse API error responses
+// Send request and get response
+let response = minreq::post(&url)
+    .with_header("Authorization", format!("Bearer {}", self.api_token))
+    .with_json(&request_body)?
+    .send()?;
+
+let status_code = response.status_code;
+
+// Get response body with safe fallback
+let body = response.as_str()
+    .unwrap_or("[unable to read response body]")
+    .to_string();
+
+// Check for success status
+if status_code >= 200 && status_code < 300 {
+    return Ok(());
+}
+
+// Parse API error responses for detailed error messages
 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
     if let Some(error) = json.get("error").and_then(|e| e.as_str()) {
         return Err(format!("Provider API error: {}", error).into());
     }
 }
 
-// Generic HTTP error
+// Generic HTTP error with response body
 Err(format!("HTTP {} error: {}", status_code, body).into())
 ```
 

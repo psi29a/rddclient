@@ -69,7 +69,9 @@ pub trait DnsClient {
 
 /// Factory function to create the appropriate DNS client based on provider type
 pub fn create_client(provider: &str, config: &crate::config::Config) -> Result<Box<dyn DnsClient>, Box<dyn Error>> {
-    match provider.to_lowercase().as_str() {
+    // Normalize provider name to lowercase ASCII once for consistent matching
+    let normalized = provider.to_ascii_lowercase();
+    match normalized.as_str() {
         "1984" | "one984" => Ok(Box::new(one984::One984Client::new(config)?)),
         "afraid" => Ok(Box::new(afraid::AfraidClient::new(config)?)),
         "changeip" => Ok(Box::new(changeip::ChangeipClient::new(config)?)),

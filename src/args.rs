@@ -4,8 +4,8 @@ use clap::Parser;
 #[command(version, about = "Rust replacement for ddclient - Multi-provider Dynamic DNS updater", long_about = None)]
 pub struct Args {
     /// DNS protocol/provider (cloudflare, dyndns2, namecheap, etc.) - ddclient compatible
-    #[arg(long, default_value = "dyndns2")]
-    pub protocol: String,
+    #[arg(long)]
+    pub protocol: Option<String>,
 
     /// Login/username for authentication - ddclient compatible
     #[arg(long)]

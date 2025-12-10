@@ -53,7 +53,7 @@ impl Config {
         let base = file_config.unwrap_or_default();
 
         Config {
-            protocol: Some(args.protocol.clone()),
+            protocol: args.protocol.clone().or(base.protocol),
             login: args.login.clone().or(base.login),
             password: args.password.clone().or(base.password),
             server: args.server.clone().or(base.server),
