@@ -1,0 +1,25 @@
+######################################################################
+## rddclient periodic update via cron
+######################################################################
+## This example shows how to run rddclient periodically using cron
+## 
+## Usage:
+##   1. Copy this file to /etc/cron.d/rddclient
+##   2. Ensure rddclient binary is in /usr/local/bin/
+##   3. Configure /etc/rddclient/rddclient.conf
+##   4. The cron daemon will run rddclient automatically
+##
+## Note: When daemon mode is implemented in rddclient, consider
+##       using systemd service + timer instead for better logging
+##       and process management.
+######################################################################
+
+# Update DNS records every 5 minutes
+*/5 * * * *   root   /usr/local/bin/rddclient --file /etc/rddclient/rddclient.conf --quiet
+
+# Alternative: Update twice a month (1st and 15th at 11:30 PM)
+# This is useful if your IP rarely changes
+# 30 23 1,15 * *   root   /usr/local/bin/rddclient --file /etc/rddclient/rddclient.conf --quiet
+
+# Alternative: Update daily at 2:30 AM
+# 30 2 * * *   root   /usr/local/bin/rddclient --file /etc/rddclient/rddclient.conf --quiet

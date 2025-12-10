@@ -881,7 +881,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Roadmap
 
-- [ ] IPv6 support
+- [x] IPv6 support (Cloudflare implemented, other providers in progress)
 - [ ] Additional providers (INWX, Hetzner, Njalla, etc.)
 - [ ] Daemon mode with automatic interval updates
 - [ ] Configuration validation command

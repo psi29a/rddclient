@@ -131,4 +131,120 @@ mod tests {
         assert_eq!(records[1], "test.example.com");
         assert_eq!(records[2], "api.example.com");
     }
+
+    #[test]
+    fn test_dns_records_with_whitespace() {
+        let config = Config {
+            host: Some("example.com , test.example.com  ,  api.example.com".to_string()),
+            ..Default::default()
+        };
+
+        let records = config.dns_records();
+        assert_eq!(records.len(), 3);
+        assert_eq!(records[0], "example.com");
+        assert_eq!(records[1], "test.example.com");
+        assert_eq!(records[2], "api.example.com");
+    }
+
+    #[test]
+    fn test_dns_records_single() {
+        let config = Config {
+            host: Some("single.example.com".to_string()),
+            ..Default::default()
+        };
+
+        let records = config.dns_records();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0], "single.example.com");
+    }
+
+    #[test]
+    fn test_dns_records_empty() {
+        let config = Config {
+            host: None,
+            ..Default::default()
+        };
+
+        let records = config.dns_records();
+        assert_eq!(records.len(), 0);
+    }
+
+    #[test]
+    fn test_config_validation_success() {
+        let config = Config {
+            host: Some("example.com".to_string()),
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_config_validation_missing_host() {
+        let config = Config {
+            host: None,
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Host is required"));
+    }
+
+    #[test]
+    fn test_config_validation_empty_host() {
+        let config = Config {
+            host: Some(String::new()),
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Host is required"));
+    }
+
+    #[test]
+    fn test_config_default() {
+        let config = Config::default();
+        
+        assert!(config.protocol.is_none());
+        assert!(config.login.is_none());
+        assert!(config.password.is_none());
+        assert!(config.server.is_none());
+        assert!(config.zone.is_none());
+        assert!(config.host.is_none());
+        assert!(config.ttl.is_none());
+        assert!(config.email.is_none());
+        assert!(config.ip.is_none());
+    }
+
+    #[test]
+    fn test_config_from_file_partial() {
+        let config_content = r#"
+        protocol = "dyndns2"
+        login = "myuser"
+        password = "mypass"
+        host = "ddns.example.com"
+        "#;
+
+        let config_path = "test_config_partial.ini";
+        let mut file = File::create(config_path).expect("Unable to create test config file");
+        file.write_all(config_content.as_bytes())
+            .expect("Unable to write to test config file");
+
+        let config = Config::from_file(config_path).expect("Failed to read config file");
+
+        assert_eq!(config.protocol.unwrap(), "dyndns2");
+        assert_eq!(config.login.unwrap(), "myuser");
+        assert_eq!(config.password.unwrap(), "mypass");
+        assert_eq!(config.host.unwrap(), "ddns.example.com");
+        
+        // Optional fields should be None
+        assert!(config.zone.is_none());
+        assert!(config.ttl.is_none());
+        assert!(config.server.is_none());
+
+        std::fs::remove_file(config_path).expect("Unable to delete test config file");
+    }
 }
