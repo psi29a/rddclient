@@ -2,7 +2,6 @@ use crate::clients::DnsClient;
 use crate::config::Config;
 use std::error::Error;
 use std::net::IpAddr;
-use base64::{Engine as _, engine::general_purpose};
 
 /// Regfish DNS client
 /// Uses DynDNS2 protocol with Regfish's server
@@ -44,8 +43,6 @@ impl DnsClient for RegfishClient {
 
         let response = minreq::get(&url)
             .with_header("User-Agent", crate::USER_AGENT)
-            .with_header("Authorization", format!("Basic {}", 
-                general_purpose::STANDARD.encode(format!("{}:{}", self.username, self.password))))
             .send()?;
 
         let status_code = response.status_code;

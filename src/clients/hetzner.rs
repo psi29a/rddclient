@@ -12,8 +12,7 @@ pub struct HetznerClient {
 impl HetznerClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let api_token = config.password.as_ref()
-            .or(config.password.as_ref())
-            .ok_or("Hetzner requires API token (use password or api_token)")?
+            .ok_or("Hetzner requires API token (use password)")?
             .clone();
         let zone_id = config.zone.as_ref()
             .ok_or("Hetzner requires zone_id (domain name)")?

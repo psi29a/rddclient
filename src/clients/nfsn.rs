@@ -40,29 +40,24 @@ impl NfsnClient {
         })
     }
 
-    /// Generate NFSN authentication header
-    /// Format: X-NFSN-Authentication: login;timestamp;salt;hash
+    /// Generate NFSN authentication header value
+    /// Format: login;timestamp;salt;hash
     /// hash = SHA1(login;timestamp;salt;api-key;request-uri;body-hash)
     fn gen_auth_header(&self, path: &str, body: &str) -> String {
-        use std::collections::hash_map::RandomState;
-        use std::hash::{BuildHasher, Hasher};
+        use rand::Rng;
         
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
         
-        // Generate 16-character random salt using timestamp and hasher
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u64(timestamp);
-        hasher.write_usize(path.len());
-        let seed = hasher.finish();
-        
-        let chars: Vec<char> = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".chars().collect();
+        // Generate cryptographically secure 16-character random salt
+        const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        let mut rng = rand::thread_rng();
         let salt: String = (0..16)
-            .map(|i| {
-                let idx = ((seed.wrapping_mul(2654435761).wrapping_add(i)) % 62) as usize;
-                chars[idx]
+            .map(|_| {
+                let idx = rng.gen_range(0..CHARSET.len());
+                CHARSET[idx] as char
             })
             .collect();
         
@@ -77,7 +72,7 @@ impl NfsnClient {
         
         let hash = hex::encode(Sha1::digest(hash_string.as_bytes()));
         
-        format!("X-NFSN-Authentication: {};{};{};{}", self.login, timestamp, salt, hash)
+        format!("{};{};{};{}", self.login, timestamp, salt, hash)
     }
 
     /// Make authenticated request to NFSN API

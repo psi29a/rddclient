@@ -129,8 +129,8 @@ host = ddns.example.com
 # Use specific network interface
 rddclient --file myconfig.conf --use-method if --if-name eth0
 
-# Use custom command
-rddclient --file myconfig.conf --use-method cmd --cmd 'curl -s ifconfig.me'
+# Use custom command (always use HTTPS for security)
+rddclient --file myconfig.conf --use-method cmd --cmd 'curl -s https://ifconfig.me'
 
 # Use custom web service
 rddclient --file myconfig.conf --use-method web --web https://api64.ipify.org
@@ -217,7 +217,7 @@ src/
 
 ## Adding New Providers
 
-To add a new DNS provider, see [`docs/adding-providers.md`](docs/adding-providers.md) for detailed instructions.
+To add a new DNS provider, see [`docs/ProviderGuidelines.md`](docs/ProviderGuidelines.md) for detailed instructions.
 
 Quick overview:
 
@@ -270,7 +270,7 @@ GPLv3
 
 ## Contributing
 
-Contributions welcome! See provider guidelines in [`docs/ProviderGuidelines.md`](ddclient/docs/ProviderGuidelines.md) for adding new providers.
+Contributions welcome! See [`docs/ProviderGuidelines.md`](docs/ProviderGuidelines.md) for comprehensive guidelines on adding new providers.
 
 ## Roadmap
 

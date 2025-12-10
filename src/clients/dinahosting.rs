@@ -33,7 +33,23 @@ impl DinahostingClient {
 
     fn get_domain_from_hostname(&self, hostname: &str) -> String {
         // Extract domain from hostname (e.g., "ddns.example.com" -> "example.com")
-        hostname.split('.').skip(1).collect::<Vec<_>>().join(".")
+        // For single-label hostnames (e.g., "localhost"), return as-is
+        let trimmed = hostname.trim();
+        
+        if trimmed.is_empty() {
+            return String::new();
+        }
+        
+        let lowercased = trimmed.to_lowercase();
+        let parts: Vec<&str> = lowercased.split('.').collect();
+        
+        if parts.len() <= 1 {
+            // Single-label hostname, return as-is (lowercased)
+            lowercased
+        } else {
+            // Multi-label hostname, skip first label and join the rest
+            parts[1..].join(".")
+        }
     }
 }
 
@@ -98,5 +114,60 @@ impl DnsClient for DinahostingClient {
 
     fn provider_name(&self) -> &str {
         "Dinahosting"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_client() -> DinahostingClient {
+        DinahostingClient {
+            server: "https://dinahosting.com".to_string(),
+            username: "testuser".to_string(),
+            password: "testpass".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_get_domain_from_hostname_multi_label() {
+        let client = create_test_client();
+        assert_eq!(client.get_domain_from_hostname("ddns.example.com"), "example.com");
+        assert_eq!(client.get_domain_from_hostname("sub.ddns.example.com"), "ddns.example.com");
+        assert_eq!(client.get_domain_from_hostname("www.example.org"), "example.org");
+    }
+
+    #[test]
+    fn test_get_domain_from_hostname_single_label() {
+        let client = create_test_client();
+        // Single-label hostnames should return themselves (lowercased)
+        assert_eq!(client.get_domain_from_hostname("localhost"), "localhost");
+        assert_eq!(client.get_domain_from_hostname("server"), "server");
+        assert_eq!(client.get_domain_from_hostname("HOSTNAME"), "hostname");
+    }
+
+    #[test]
+    fn test_get_domain_from_hostname_with_whitespace() {
+        let client = create_test_client();
+        // Should trim whitespace and extract domain
+        assert_eq!(client.get_domain_from_hostname(" example.com "), "com");
+        assert_eq!(client.get_domain_from_hostname(" ddns.example.com "), "example.com");
+        assert_eq!(client.get_domain_from_hostname(" localhost "), "localhost");
+    }
+
+    #[test]
+    fn test_get_domain_from_hostname_empty() {
+        let client = create_test_client();
+        // Empty input should return empty string
+        assert_eq!(client.get_domain_from_hostname(""), "");
+        assert_eq!(client.get_domain_from_hostname("   "), "");
+    }
+
+    #[test]
+    fn test_get_domain_from_hostname_case_insensitive() {
+        let client = create_test_client();
+        // Should lowercase the result
+        assert_eq!(client.get_domain_from_hostname("DDNS.EXAMPLE.COM"), "example.com");
+        assert_eq!(client.get_domain_from_hostname("WwW.ExAmPlE.OrG"), "example.org");
     }
 }
