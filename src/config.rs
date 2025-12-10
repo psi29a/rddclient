@@ -81,10 +81,10 @@ impl Config {
 
     /// Validate that required fields are present
     pub fn validate(&self) -> Result<(), Box<dyn Error>> {
-        if self.host.is_none() || self.host.as_ref().unwrap().is_empty() {
+        if self.host.as_deref().unwrap_or("").is_empty() {
             return Err("Host is required (use --host)".into());
         }
-        if self.protocol.is_none() || self.protocol.as_ref().unwrap().is_empty() {
+        if self.protocol.as_deref().unwrap_or("").is_empty() {
             return Err("Protocol is required (use --protocol)".into());
         }
 

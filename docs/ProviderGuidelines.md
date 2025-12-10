@@ -150,8 +150,8 @@ impl DnsClient for NewProviderClient {
             log::info!("Successfully updated {} to {}", hostname, ip);
             Ok(())
         } else {
-            Err(format!("HTTP {} error: {}", response.status_code, 
-                       response.as_str()?).into())
+            let body = response.as_str().unwrap_or("<empty body>");
+            Err(format!("HTTP {} error: {}", response.status_code, body).into())
         }
     }
     
