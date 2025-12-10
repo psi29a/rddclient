@@ -93,6 +93,18 @@ pub struct Args {
 }
 
 impl Args {
+    /// Create an `Args` instance populated from the current process command-line arguments.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let args = Args::new();
+    /// println!("{:?}", args);
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// An `Args` populated from the current process command-line arguments.
     pub fn new() -> Self {
         Self::parse()
     }

@@ -12,6 +12,25 @@ pub struct DonDominioClient {
 }
 
 impl DonDominioClient {
+    /// Constructs a DonDominioClient from a Config by extracting the required credentials and optional server.
+    ///
+    /// Returns an error if the API key (config.password) or username (config.login) is missing:
+    /// - Error message "password (API key) is required for DonDominio" when `config.password` is absent.
+    /// - Error message "username is required for DonDominio" when `config.login` is absent.
+    /// The server URL defaults to "https://dondns.dondominio.com" when `config.server` is not provided.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Assuming `Config` has fields: `login: Option<String>`, `password: Option<String>`, `server: Option<String>`
+    /// let cfg = Config {
+    ///     login: Some("user@example.com".to_string()),
+    ///     password: Some("secret_api_key".to_string()),
+    ///     server: None,
+    /// };
+    /// let client = DonDominioClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "DonDominio");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let api_key = config.password.as_ref()
             .ok_or("password (API key) is required for DonDominio")?
@@ -33,6 +52,26 @@ impl DonDominioClient {
 }
 
 impl DnsClient for DonDominioClient {
+    /// Update the DNS record for a hostname to the given IP on DonDominio.
+    ///
+    /// Attempts to update the record at the provider and returns success only when
+    /// the provider acknowledges the change.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the update is acknowledged by DonDominio. `Err` when the HTTP
+    /// request fails, the provider responds with a non-200 status code, the response
+    /// indicates authentication failure, the provider reports an error, or the
+    /// response is not recognised.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// // `client` must be an initialized DonDominioClient (shown here as a placeholder).
+    /// let client: DonDominioClient = /* initialized client */;
+    /// let _ = client.update_record("host.example.com", "1.2.3.4".parse::<IpAddr>().unwrap());
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let record_type = match ip {
             IpAddr::V4(_) => "A",
@@ -81,6 +120,27 @@ impl DnsClient for DonDominioClient {
         }
     }
 
+    /// Ensures the DonDominio client has both a username and an API key configured.
+    ///
+    /// Returns `Ok(())` when `username` and `api_key` are non-empty. Returns an `Err` with a descriptive message when either value is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let good = DonDominioClient {
+    ///     server: "https://dondns.dondominio.com".into(),
+    ///     api_key: "secret".into(),
+    ///     username: "user".into(),
+    /// };
+    /// assert!(good.validate_config().is_ok());
+    ///
+    /// let missing_key = DonDominioClient {
+    ///     server: "https://dondns.dondominio.com".into(),
+    ///     api_key: "".into(),
+    ///     username: "user".into(),
+    /// };
+    /// assert!(missing_key.validate_config().is_err());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for DonDominio".into());
@@ -91,6 +151,14 @@ impl DnsClient for DonDominioClient {
         Ok(())
     }
 
+    /// Provides the DNS provider name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DonDominioClient { server: String::from("https://dondns.dondominio.com"), api_key: String::from("key"), username: String::from("user") };
+    /// assert_eq!(client.provider_name(), "DonDominio");
+    /// ```
     fn provider_name(&self) -> &str {
         "DonDominio"
     }

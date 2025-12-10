@@ -13,6 +13,26 @@ pub struct DynuClient {
 }
 
 impl DynuClient {
+    /// Creates a DynuClient from a Config by reading username, password, and optional server.
+    ///
+    /// If `config.server` is missing, the server defaults to "https://api.dynu.com".
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `config.login` or `config.password` is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Assuming `Config` has fields `login: Option<String>`, `password: Option<String>`, `server: Option<String>`
+    /// let cfg = Config {
+    ///     login: Some("user".to_string()),
+    ///     password: Some("secret".to_string()),
+    ///     server: None,
+    /// };
+    /// let client = DynuClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "Dynu");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Dynu")?
@@ -34,6 +54,23 @@ impl DynuClient {
 }
 
 impl DnsClient for DynuClient {
+    /// Updates the DNS A record for `hostname` at the Dynu provider to the given IP address.
+    ///
+    /// On success this returns `Ok(())`. On failure returns `Err` with a descriptive message indicating
+    /// the cause (authentication failure, invalid hostname format, unknown hostname, account blocked for
+    /// abuse, transient server error, an HTTP error status, or an unexpected provider response).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// # // The following hidden lines demonstrate typical construction; adjust to your crate's API.
+    /// # use crate::Config;
+    /// # use crate::clients::dynu::DynuClient;
+    /// # let config = Config::default();
+    /// # let client = DynuClient::new(&config).unwrap();
+    /// client.update_record("host.example.com", "1.2.3.4".parse::<IpAddr>().unwrap()).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/nic/update?hostname={}&myip={}",
@@ -76,6 +113,22 @@ impl DnsClient for DynuClient {
         }
     }
 
+    /// Validate that the client's username and password are set.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if both `username` and `password` are non-empty, `Err` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DynuClient {
+    ///     server: "https://api.dynu.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Dynu".into());
@@ -86,6 +139,14 @@ impl DnsClient for DynuClient {
         Ok(())
     }
 
+    /// Provides the provider identifier for this DNS client.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let client = DynuClient { server: "https://api.dynu.com".into(), username: "user".into(), password: "pass".into() };
+    /// assert_eq!(client.provider_name(), "Dynu");
+    /// ```
     fn provider_name(&self) -> &str {
         "Dynu"
     }

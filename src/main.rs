@@ -10,6 +10,27 @@ use std::error::Error;
 /// User-Agent header value for HTTP requests
 pub const USER_AGENT: &str = concat!("rddclient/", env!("CARGO_PKG_VERSION"));
 
+/// Initialize the global logger using simple boolean flags to select the log level.
+///
+/// The chosen level follows these precedence rules:
+/// - `quiet` selects `Error`
+/// - otherwise `debug` selects `Debug`
+/// - otherwise `verbose` or `test` selects `Info`
+/// - otherwise `Warn` is used
+///
+/// # Parameters
+///
+/// - `verbose`: enable informational logging
+/// - `test`: enable informational logging for test mode
+/// - `debug`: enable debug-level logging
+/// - `quiet`: restrict logging to errors only
+///
+/// # Examples
+///
+/// ```
+/// // Choose info-level logging (verbose)
+/// init_logger(true, false, false, false);
+/// ```
 fn init_logger(verbose: bool, test: bool, debug: bool, quiet: bool) {
     let log_level = if quiet {
         log::LevelFilter::Error
@@ -26,6 +47,27 @@ fn init_logger(verbose: bool, test: bool, debug: bool, quiet: bool) {
         .init();
 }
 
+/// Entrypoint that loads configuration, determines the current IP, and updates configured DNS records.
+///
+/// This function:
+/// - initializes logging and state management,
+/// - loads and validates configuration,
+/// - selects an IP detection method and resolves the current IP,
+/// - creates and validates a provider client,
+/// - iterates configured DNS hostnames and updates each record when allowed by rate limits or forced,
+/// - records per-host success or failure state and persists state to disk.
+///
+/// # Returns
+///
+/// `Ok(())` on successful completion; an `Err` containing a boxed error if any step fails.
+///
+/// # Examples
+///
+/// ```no_run
+/// # use std::error::Error;
+/// // Run the updater; in documentation examples we avoid executing network/IO operations.
+/// let _ = crate::main();
+/// ```
 fn main() -> Result<(), Box<dyn Error>> {
     let args = args::Args::new();
     let test = args.test;

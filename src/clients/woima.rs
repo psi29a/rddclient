@@ -12,6 +12,24 @@ pub struct WoimaClient {
 }
 
 impl WoimaClient {
+    /// Creates a new WoimaClient from the provided configuration.
+    ///
+    /// Returns an error if the configuration does not contain a username or password.
+    /// The server URL is taken from `config.server` when present; otherwise it defaults to
+    /// "https://www.woima.fi".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = Config {
+    ///     login: Some("alice".to_string()),
+    ///     password: Some("s3cr3t".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = WoimaClient::new(&cfg).expect("valid Woima configuration");
+    /// assert_eq!(client.provider_name(), "Woima.fi");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Woima.fi")?
@@ -33,6 +51,32 @@ impl WoimaClient {
 }
 
 impl DnsClient for WoimaClient {
+    /// Update a DNS A record at Woima.fi using the DynDNS2-compatible API.
+    ///
+    /// The method performs an authenticated request to the provider's /nic/update
+    /// endpoint and interprets DynDNS2 response codes to determine success or
+    /// failure.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the provider accepted the update (response starts with `good` or `nochg`); `Err` with a descriptive message for authentication errors, invalid hostnames, missing hosts, account blocks, HTTP errors, or other provider responses.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    ///
+    /// let client = WoimaClient {
+    ///     server: "https://www.woima.fi".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    ///
+    /// // Attempt to update example.com to 1.2.3.4
+    /// let ip: IpAddr = "1.2.3.4".parse().unwrap();
+    /// let res = client.update_record("example.com", ip);
+    /// assert!(res.is_ok() || res.is_err());
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating {} with Woima.fi", hostname);
 
@@ -75,6 +119,20 @@ impl DnsClient for WoimaClient {
         }
     }
 
+    /// Ensure the client has the required Woima.fi credentials.
+    ///
+    /// Returns `Ok(())` when both `username` and `password` are non-empty; returns `Err` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::woima::WoimaClient {
+    ///     server: "https://www.woima.fi".into(),
+    ///     username: "user".into(),
+    ///     password: "secret".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Woima.fi".into());
@@ -85,6 +143,18 @@ impl DnsClient for WoimaClient {
         Ok(())
     }
 
+    /// Provides the human-readable name of this DNS provider.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = WoimaClient {
+    ///     server: "https://www.woima.fi".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert_eq!(client.provider_name(), "Woima.fi");
+    /// ```
     fn provider_name(&self) -> &str {
         "Woima.fi"
     }
@@ -93,6 +163,16 @@ impl DnsClient for WoimaClient {
 mod base64 {
     use base64::{Engine as _, engine::general_purpose};
     
+    /// Encodes a string using standard Base64 encoding.
+    ///
+    /// Returns the Base64-encoded representation of `data`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let out = crate::clients::woima::base64::encode("user:pass");
+    /// assert_eq!(out, "dXNlcjpwYXNz");
+    /// ```
     pub fn encode(data: &str) -> String {
         general_purpose::STANDARD.encode(data.as_bytes())
     }

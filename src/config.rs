@@ -34,7 +34,22 @@ pub struct Config {
 }
 
 impl Config {
-    /// Load configuration from file (ddclient format)
+    /// Load a ddclient-formatted configuration file and produce a Config using the first host block found.
+    ///
+    /// # Parameters
+    ///
+    /// - `path`: Filesystem path to the ddclient-format configuration file.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Config)` constructed from the first host block in the file, `Err` if the file cannot be read/parsed or no host block is present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = Config::from_file("rddclient.conf").expect("failed to load config");
+    /// cfg.validate().expect("invalid config");
+    /// ```
     pub fn from_file(path: &str) -> Result<Self, Box<dyn Error>> {
         let ddclient_config = DdclientConfig::from_file(path)?;
         
@@ -47,8 +62,19 @@ impl Config {
         }
     }
 
-    /// Merge configuration from file with CLI arguments
-    /// CLI arguments take precedence over file configuration
+    /// Combine an optional file-derived Config with CLI arguments, using CLI values when provided.
+    ///
+    /// Fields present in `args` override values from `file_config`; any CLI field not set falls back
+    /// to the corresponding value from `file_config` or to the struct default when both are absent.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Use default Args when none are provided from the CLI
+    /// let args = crate::args::Args::default();
+    /// let merged = crate::config::Config::merge(None, &args);
+    /// // `merged` now reflects CLI defaults merged with no file configuration
+    /// ```
     pub fn merge(file_config: Option<Self>, args: &crate::args::Args) -> Self {
         let base = file_config.unwrap_or_default();
 
@@ -65,7 +91,18 @@ impl Config {
         }
     }
 
-    /// Load and merge configuration
+    /// Load configuration from a ddclient-formatted file (or the default path) and merge it with CLI arguments.
+    ///
+    /// If `args.file` is set and the referenced file exists it is parsed; otherwise the default path
+    /// "rddclient.conf" is checked. The returned Config is produced by merging the file configuration
+    /// (if any) with the provided `args`, with values from `args` taking precedence.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let args = /* construct CLI args */ unimplemented!();
+    /// let cfg = crate::config::Config::load(&args).unwrap();
+    /// ```
     pub fn load(args: &crate::args::Args) -> Result<Self, Box<dyn Error>> {
         let default_config_path = "rddclient.conf";
         let config_file = args.file.as_deref().unwrap_or(default_config_path);
@@ -79,7 +116,15 @@ impl Config {
         Ok(Self::merge(file_config, args))
     }
 
-    /// Validate that required fields are present
+    /// Ensures the config contains a non-empty host value.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the `host` field is missing or an empty string.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` when the host is present and non-empty.
     pub fn validate(&self) -> Result<(), Box<dyn Error>> {
         if self.host.is_none() || self.host.as_ref().unwrap().is_empty() {
             return Err("Host is required (use --host)".into());
@@ -88,7 +133,25 @@ impl Config {
         Ok(())
     }
 
-    /// Get DNS records as a vector
+    /// Split the `host` field into individual DNS host records.
+    ///
+    /// Trims whitespace around each comma-separated token, filters out empty entries,
+    /// and returns them as a `Vec<String>`. If `host` is `None` or contains only
+    /// empty tokens, an empty vector is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = Config { host: Some(" example.com, www.example.com , ,api.example.com ".into()), ..Default::default() };
+    /// assert_eq!(
+    ///     cfg.dns_records(),
+    ///     vec![
+    ///         "example.com".to_string(),
+    ///         "www.example.com".to_string(),
+    ///         "api.example.com".to_string()
+    ///     ]
+    /// );
+    /// ```
     pub fn dns_records(&self) -> Vec<String> {
         self.host
             .as_ref()
@@ -103,6 +166,32 @@ impl Config {
 }
 
 impl From<HostConfig> for Config {
+    /// Create a `Config` by copying relevant fields from a `HostConfig`.
+    ///
+    /// The resulting `Config` has the same protocol, login, password, server, zone,
+    /// host, ttl, and email as the source `HostConfig`; its `ip` field is set to
+    /// `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let hc = HostConfig {
+    ///     protocol: Some("dyndns2".to_string()),
+    ///     login: Some("user".to_string()),
+    ///     password: Some("pass".to_string()),
+    ///     server: Some("members.dyndns.org".to_string()),
+    ///     zone: None,
+    ///     host: Some("example.com".to_string()),
+    ///     ttl: Some(300),
+    ///     email: None,
+    ///     use_method: None,
+    ///     web: None,
+    ///     ssl: None,
+    /// };
+    /// let cfg: Config = hc.into();
+    /// assert_eq!(cfg.host.unwrap(), "example.com");
+    /// assert_eq!(cfg.ip, None);
+    /// ```
     fn from(hc: HostConfig) -> Self {
         Config {
             protocol: hc.protocol,
@@ -145,13 +234,45 @@ struct HostConfig {
 }
 
 impl DdclientConfig {
-    /// Parse ddclient configuration file
+    /// Read a ddclient-formatted file and parse it into a DdclientConfig.
+    ///
+    /// Returns an error if the file cannot be read or if parsing fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::fs;
+    /// // write a minimal ddclient-style config
+    /// let path = "test_ddclient.conf";
+    /// fs::write(path, "protocol=dyndns2\nhost=example.com\n").unwrap();
+    /// let cfg = DdclientConfig::from_file(path).unwrap();
+    /// assert!(cfg.configs.len() >= 1);
+    /// ```
     pub fn from_file(path: &str) -> Result<Self, Box<dyn Error>> {
         let content = fs::read_to_string(path)?;
         Self::parse(&content)
     }
 
-    /// Parse ddclient configuration from string
+    /// Parse ddclient-formatted configuration text into a DdclientConfig containing one or more host blocks.
+    ///
+    /// The parser understands line continuations ending with a backslash, ignores `#` comments and empty lines,
+    /// applies global defaults to subsequent blocks, accepts comma-separated key=value pairs, and treats bare
+    /// hostnames or trailing tokens after a value as host entries that terminate a block. Each resulting
+    /// HostConfig is produced by merging global defaults with per-block settings and the hostname.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let content = r#"
+    /// protocol=dyndns2
+    /// login=alice
+    /// password=secret
+    /// host example.com
+    /// "#;
+    /// let cfg = DdclientConfig::parse(content).unwrap();
+    /// assert_eq!(cfg.configs.len(), 1);
+    /// assert_eq!(cfg.configs[0].host.as_deref(), Some("example.com"));
+    /// ```
     pub fn parse(content: &str) -> Result<Self, Box<dyn Error>> {
         let mut configs = Vec::new();
         let mut global_defaults: HashMap<String, String> = HashMap::new();
@@ -261,7 +382,17 @@ impl DdclientConfig {
         Ok(DdclientConfig { configs })
     }
     
-    /// Join lines that end with backslash
+    /// Collapse lines ending with a backslash into single lines by removing the backslash and joining the continued parts with a single space.
+    ///
+    /// Trailing whitespace is trimmed from each input line before processing. Lines without a trailing backslash are emitted with a terminating newline; continued lines are concatenated and terminated once the continuation ends.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let input = "protocol=dyndns2 \\\n  server=example.com\\\n  \\\nhost=example.org\n";
+    /// let out = join_continued_lines(input);
+    /// assert_eq!(out, "protocol=dyndns2 server=example.com host=example.org\n");
+    /// ```
     fn join_continued_lines(content: &str) -> String {
         let mut result = String::new();
         let mut current_line = String::new();
@@ -291,7 +422,31 @@ impl DdclientConfig {
         result
     }
     
-    /// Convert HashMap to HostConfig
+    /// Create a HostConfig from a map of ddclient-style key/value strings.
+    ///
+    /// The function reads common ddclient keys from `map` (e.g. "protocol", "login",
+    /// "server", "host", "ttl", "ssl") and converts them into the corresponding
+    /// HostConfig fields. Numeric `ttl` values are parsed as `u32`; `ssl` is parsed
+    /// as `Some(true)` for `yes|true|1`, `Some(false)` for `no|false|0`, and `None`
+    /// when the value is unrecognized or missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// let mut m = HashMap::new();
+    /// m.insert("host".to_string(), "example.com".to_string());
+    /// m.insert("protocol".to_string(), "dyndns2".to_string());
+    /// m.insert("ttl".to_string(), "300".to_string());
+    /// m.insert("ssl".to_string(), "yes".to_string());
+    ///
+    /// let hc = crate::config::map_to_config(m);
+    /// assert_eq!(hc.host.as_deref(), Some("example.com"));
+    /// assert_eq!(hc.protocol.as_deref(), Some("dyndns2"));
+    /// assert_eq!(hc.ttl, Some(300));
+    /// assert_eq!(hc.ssl, Some(true));
+    /// ```
     fn map_to_config(map: HashMap<String, String>) -> HostConfig {
         HostConfig {
             protocol: map.get("protocol").cloned(),
@@ -444,8 +599,19 @@ host2.example.com
     }
 }
 
-/// Parse interval string (e.g., "30s", "5m", "1h", "25d") to seconds
-/// ddclient-compatible format
+/// Convert a duration string with a single-unit suffix into a number of seconds.
+///
+/// Accepts a numeric value followed by one of the units `s`, `m`, `h`, or `d` (seconds, minutes, hours, days).
+/// Returns an error for empty input, invalid numeric portion, or an unknown unit.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!(crate::config::parse_interval("30s").unwrap(), 30);
+/// assert_eq!(crate::config::parse_interval("5m").unwrap(), 300);
+/// assert_eq!(crate::config::parse_interval("1h").unwrap(), 3600);
+/// assert_eq!(crate::config::parse_interval("2d").unwrap(), 172800);
+/// ```
 pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
     if interval.is_empty() {
         return Err("Interval cannot be empty".into());

@@ -13,6 +13,27 @@ pub struct GoogleDomainsClient {
 }
 
 impl GoogleDomainsClient {
+    /// Creates a `GoogleDomainsClient` from a `Config`.
+    ///
+    /// The provided `Config` must include `login` (username) and `password`; if `server` is omitted the client will use
+    /// "https://domains.google.com".
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `login` or `password` are not present in `config`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = Config {
+    ///     login: Some("user@example.com".into()),
+    ///     password: Some("s3cret".into()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = GoogleDomainsClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "Google Domains");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Google Domains")?
@@ -34,6 +55,31 @@ impl GoogleDomainsClient {
 }
 
 impl DnsClient for GoogleDomainsClient {
+    /// Update a DNS A record for a hostname using Google Domains' DynDNS2-compatible API.
+    ///
+    /// Sends an update request for `hostname` to the configured Google Domains server and interprets
+    /// DynDNS2-style responses to determine success or failure.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the provider accepted the update; `Err` with a descriptive message for HTTP errors,
+    /// authentication failures, invalid hostname format, nonexistent hostnames, abuse blocks, provider
+    /// server errors, or any unexpected provider response.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    ///
+    /// let client = GoogleDomainsClient {
+    ///     server: "https://domains.google.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    ///
+    /// let ip: IpAddr = "1.2.3.4".parse().unwrap();
+    /// client.update_record("example.com", ip).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/nic/update?hostname={}&myip={}",
@@ -76,6 +122,21 @@ impl DnsClient for GoogleDomainsClient {
         }
     }
 
+    /// Validates that the client has both a username and a password configured.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty, or an `Err` with a
+    /// descriptive message when either field is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = GoogleDomainsClient {
+    ///     server: "https://domains.google.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Google Domains".into());
@@ -86,6 +147,22 @@ impl DnsClient for GoogleDomainsClient {
         Ok(())
     }
 
+    /// Provider display name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::googledomains::GoogleDomainsClient {
+    ///     server: String::from("https://domains.google.com"),
+    ///     username: String::from("user"),
+    ///     password: String::from("pass"),
+    /// };
+    /// assert_eq!(client.provider_name(), "Google Domains");
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// The provider's human-readable name, `"Google Domains"`.
     fn provider_name(&self) -> &str {
         "Google Domains"
     }

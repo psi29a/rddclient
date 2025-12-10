@@ -13,6 +13,32 @@ pub struct SitelutionsClient {
 }
 
 impl SitelutionsClient {
+    /// Constructs a SitelutionsClient from a Config.
+    ///
+    /// The function requires `login` and `password` to be present in `config`; if either is missing it returns an error with the message
+    /// "username is required for Sitelutions" or "password is required for Sitelutions" respectively. If `server` is not provided, it defaults
+    /// to "https://www.sitelutions.com".
+    ///
+    /// # Parameters
+    ///
+    /// - `config`: Configuration containing `login`, `password`, and an optional `server` URL.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(SitelutionsClient)` when credentials are present and the client is created, or an `Err` with a descriptive message when `login` or `password` is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let config = Config {
+    ///     login: Some("user".to_string()),
+    ///     password: Some("pass".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = SitelutionsClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "Sitelutions");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Sitelutions")?
@@ -34,6 +60,29 @@ impl SitelutionsClient {
 }
 
 impl DnsClient for SitelutionsClient {
+    /// Sends a DynDNS2-style update for `hostname` to the Sitelutions service and interprets the response.
+    ///
+    /// The method constructs an update request to the configured server, authenticates with HTTP Basic
+    /// using the client's credentials, and interprets DynDNS2-style response bodies:
+    /// "good"/"nochg" indicate success; "badauth", "notfqdn", "nohost", "abuse", "911" and other bodies
+    /// are mapped to descriptive errors.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on successful update; `Err` with a descriptive message for HTTP errors or any recognized
+    /// or unexpected service response.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// let client = SitelutionsClient {
+    ///     server: "https://www.sitelutions.com".to_string(),
+    ///     username: "user".to_string(),
+    ///     password: "pass".to_string(),
+    /// };
+    /// let _ = client.update_record("example.example", "203.0.113.1".parse::<IpAddr>().unwrap());
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/dnsup?hostname={}&ip={}",
@@ -76,6 +125,22 @@ impl DnsClient for SitelutionsClient {
         }
     }
 
+    /// Ensures the client has both a username and password configured.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty.
+    /// Returns an `Err` with the message `"username is required for Sitelutions"` if `username` is empty,
+    /// or `"password is required for Sitelutions"` if `password` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = SitelutionsClient {
+    ///     server: "https://www.sitelutions.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Sitelutions".into());
@@ -86,6 +151,18 @@ impl DnsClient for SitelutionsClient {
         Ok(())
     }
 
+    /// Provider name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = SitelutionsClient {
+    ///     server: String::from("https://www.sitelutions.com"),
+    ///     username: String::from("user"),
+    ///     password: String::from("pass"),
+    /// };
+    /// assert_eq!(client.provider_name(), "Sitelutions");
+    /// ```
     fn provider_name(&self) -> &str {
         "Sitelutions"
     }

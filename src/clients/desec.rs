@@ -12,6 +12,28 @@ pub struct DesecClient {
 }
 
 impl DesecClient {
+    /// Create a new deSEC DNS client from a Config.
+    ///
+    /// Validates that the config provides an API token and a domain (zone), and uses
+    /// "https://update.dedyn.io" as the server URL when none is supplied in config.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Construct a Config with the expected fields.
+    /// let cfg = Config {
+    ///     password: Some("example-token".to_string()),
+    ///     zone: Some("example.com".to_string()),
+    ///     server: None,
+    /// };
+    /// let client = DesecClient::new(&cfg).expect("failed to create deSEC client");
+    /// assert_eq!(client.provider_name(), "deSEC");
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// A configured `DesecClient` on success; returns an error if `password` (api_token)
+    /// or `zone` (domain) is missing from the provided `Config`.
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
             .ok_or("api_token is required for deSEC")?
@@ -33,6 +55,32 @@ impl DesecClient {
 }
 
 impl DnsClient for DesecClient {
+    /// Update the DNS record for a hostname at deSEC using the DynDNS2-compatible update endpoint.
+    ///
+    /// Performs a GET request to the configured deSEC server's /update endpoint using HTTP Basic
+    /// authentication (domain:token). Interprets a 200 response whose body starts with `good` or
+    /// `nochg` as success; known error responses such as `badauth` and `notfqdn` are mapped to
+    /// descriptive errors.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the update succeeded (response body starts with `good` or `nochg`), `Err` with a
+    /// descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    ///
+    /// let client = DesecClient {
+    ///     server: "https://update.dedyn.io".into(),
+    ///     token: "token".into(),
+    ///     domain: "example.com".into(),
+    /// };
+    ///
+    /// let ip: IpAddr = "1.2.3.4".parse().unwrap();
+    /// client.update_record("host.example.com", ip).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating {} with deSEC", hostname);
 
@@ -79,6 +127,18 @@ impl DnsClient for DesecClient {
         }
     }
 
+    /// Validates that the client has a non-empty API token and domain configured.
+    ///
+    /// Returns `Ok(())` when both token and domain are present.
+    /// Returns an `Err` with the message `"api_token is required for deSEC"` if the token is empty,
+    /// or `"zone_id (domain) is required for deSEC"` if the domain is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DesecClient { server: "https://example".into(), token: "token".into(), domain: "example.com".into() };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.token.is_empty() {
             return Err("api_token is required for deSEC".into());
@@ -89,6 +149,16 @@ impl DnsClient for DesecClient {
         Ok(())
     }
 
+    /// Provider identifier for this DNS client implementation.
+    ///
+    /// Returns the static provider name used to identify this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DesecClient { server: String::new(), token: String::new(), domain: String::new() };
+    /// assert_eq!(client.provider_name(), "deSEC");
+    /// ```
     fn provider_name(&self) -> &str {
         "deSEC"
     }
@@ -97,6 +167,17 @@ impl DnsClient for DesecClient {
 mod base64 {
     use base64::{Engine as _, engine::general_purpose};
     
+    /// Encodes a UTF-8 string to Base64 using the standard alphabet.
+    ///
+    /// The returned string is the Base64 representation of `data` using the standard
+    /// character set (RFC 4648).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let out = base64::encode("foo");
+    /// assert_eq!(out, "Zm9v");
+    /// ```
     pub fn encode(data: &str) -> String {
         general_purpose::STANDARD.encode(data.as_bytes())
     }

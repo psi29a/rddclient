@@ -28,7 +28,7 @@ LOCAL_IP=$4
 REMOTE_IP=$5
 IPPARAM=$6
 
-# Log function
+# log writes its arguments to the system logger using the tag "rddclient-ppp".
 log() {
     logger -t rddclient-ppp "$@"
 }

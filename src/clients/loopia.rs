@@ -13,6 +13,19 @@ pub struct LoopiaClient {
 }
 
 impl LoopiaClient {
+    /// Create a `LoopiaClient` from a configuration.
+    ///
+    /// The function reads `login` and `password` from `config` and returns an error if either is
+    /// missing. If `server` is not provided in the configuration, it defaults to `https://dns.loopia.se`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use your_crate::clients::loopia::LoopiaClient;
+    /// # use your_crate::config::Config;
+    /// // Build a Config with `login`, `password`, and optionally `server`, then:
+    /// // let client = LoopiaClient::new(&config).expect("valid Loopia config");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Loopia")?
@@ -34,6 +47,29 @@ impl LoopiaClient {
 }
 
 impl DnsClient for LoopiaClient {
+    /// Update the DNS record for `hostname` at Loopia using the DynDNS2 API.
+    ///
+    /// Attempts to set the host's IP to `ip` by calling Loopia's XDynDNS endpoint and
+    /// interpreting DynDNS2-style responses.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success; an `Err` containing a descriptive error message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    ///
+    /// let client = LoopiaClient {
+    ///     server: "https://dns.loopia.se".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    ///
+    /// let ip: IpAddr = "127.0.0.1".parse().unwrap();
+    /// let _ = client.update_record("example.com", ip);
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/XDynDNSServer/XDynDNS.php?hostname={}&myip={}",
@@ -76,6 +112,34 @@ impl DnsClient for LoopiaClient {
         }
     }
 
+    /// Validates that the client has both username and password configured.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty, `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let good = LoopiaClient {
+    ///     server: "https://dns.loopia.se".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(good.validate_config().is_ok());
+    ///
+    /// let bad_user = LoopiaClient {
+    ///     server: "https://dns.loopia.se".into(),
+    ///     username: "".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert_eq!(bad_user.validate_config().unwrap_err().to_string(), "username is required for Loopia");
+    ///
+    /// let bad_pass = LoopiaClient {
+    ///     server: "https://dns.loopia.se".into(),
+    ///     username: "user".into(),
+    ///     password: "".into(),
+    /// };
+    /// assert_eq!(bad_pass.validate_config().unwrap_err().to_string(), "password is required for Loopia");
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Loopia".into());
@@ -86,6 +150,18 @@ impl DnsClient for LoopiaClient {
         Ok(())
     }
 
+    /// Returns the provider name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = LoopiaClient {
+    ///     server: "https://dns.loopia.se".to_string(),
+    ///     username: "user".to_string(),
+    ///     password: "pass".to_string(),
+    /// };
+    /// assert_eq!(client.provider_name(), "Loopia");
+    /// ```
     fn provider_name(&self) -> &str {
         "Loopia"
     }

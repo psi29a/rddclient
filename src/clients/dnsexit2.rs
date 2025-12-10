@@ -12,6 +12,31 @@ pub struct Dnsexit2Client {
 }
 
 impl Dnsexit2Client {
+    /// Create a DNSExit2 client from the given configuration.
+    ///
+    /// The returned client is configured using `config.password` as the API key,
+    /// `config.server` (defaulting to "api.dnsexit.com" when absent), a fixed path
+    /// of "/dns/", `config.ttl` (defaulting to 5 when absent), and `config.zone`
+    /// (empty string when absent).
+    ///
+    /// # Returns
+    ///
+    /// `Ok(Dnsexit2Client)` initialized from `config`; `Err` if the configuration
+    /// does not include an API key (`password`).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Construct a Config with at least a password, then create the client.
+    /// let cfg = Config {
+    ///     password: Some("my_api_key".to_string()),
+    ///     server: None,
+    ///     ttl: None,
+    ///     zone: None,
+    ///     // other fields...
+    /// };
+    /// let client = Dnsexit2Client::new(&cfg).expect("failed to create client");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let api_key = config.password.as_ref()
             .ok_or("API key (password) is required for DNSExit2")?;
@@ -34,6 +59,28 @@ impl Dnsexit2Client {
 }
 
 impl DnsClient for Dnsexit2Client {
+    /// Updates the DNS record for a hostname at DNSExit2 using the configured client.
+    ///
+    /// Sends a POST request to the DNSExit2 API to set an A or AAAA record for `hostname` to `ip`.
+    /// The client's `zone` is used as the domain; if `zone` is empty, `hostname` is used as the domain.
+    /// On success the function returns without error; on failure it returns an error describing the HTTP or API-level problem.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    ///
+    /// let client = Dnsexit2Client {
+    ///     api_key: "secret".into(),
+    ///     server: "api.dnsexit.com".into(),
+    ///     path: "/dns/".into(),
+    ///     ttl: 5,
+    ///     zone: "".into(),
+    /// };
+    ///
+    /// // Update an IPv4 record (may perform network I/O in real use)
+    /// let _ = client.update_record("host.example.com", "1.2.3.4".parse::<IpAddr>().unwrap());
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating DNSExit2 record for {} to {}", hostname, ip);
 
@@ -85,6 +132,22 @@ impl DnsClient for Dnsexit2Client {
         }
     }
 
+    /// Validates the client's configuration by ensuring an API key is set.
+    ///
+    /// Returns `Ok(())` if the API key is not empty, `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = Dnsexit2Client {
+    ///     api_key: "secret".to_string(),
+    ///     server: "api.dnsexit.com".to_string(),
+    ///     path: "/dns/".to_string(),
+    ///     ttl: 5,
+    ///     zone: "".to_string(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.api_key.is_empty() {
             return Err("DNSExit2 API key cannot be empty".into());
@@ -92,6 +155,24 @@ impl DnsClient for Dnsexit2Client {
         Ok(())
     }
 
+    /// Provides the provider identifier for this client.
+    ///
+    /// # Returns
+    ///
+    /// The static provider name "DNSExit2".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = Dnsexit2Client {
+    ///     api_key: String::new(),
+    ///     server: String::new(),
+    ///     path: String::new(),
+    ///     ttl: 5,
+    ///     zone: String::new(),
+    /// };
+    /// assert_eq!(client.provider_name(), "DNSExit2");
+    /// ```
     fn provider_name(&self) -> &'static str {
         "DNSExit2"
     }

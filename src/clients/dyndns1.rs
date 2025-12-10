@@ -14,6 +14,32 @@ pub struct Dyndns1Client {
 }
 
 impl Dyndns1Client {
+    /// Create a configured Dyndns1Client from the provided Config.
+    ///
+    /// Extracts `login` and `password` from `config` and uses `config.server` or
+    /// defaults to "https://members.dyndns.org" when omitted. Returns an error if
+    /// the required credentials are missing.
+    ///
+    /// # Parameters
+    ///
+    /// - `config`: configuration containing `login` and `password`; `server` is optional.
+    ///
+    /// # Returns
+    ///
+    /// A `Dyndns1Client` configured with the provided credentials and server, or an error if
+    /// `login` or `password` is not present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = Config {
+    ///     login: Some("user".into()),
+    ///     password: Some("pass".into()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = Dyndns1Client::new(&cfg).expect("valid config");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for DynDNS v1")?
@@ -39,6 +65,21 @@ impl Dyndns1Client {
 }
 
 impl DnsClient for Dyndns1Client {
+    /// Update the DNS record for a hostname using the DynDNS v1 protocol.
+    ///
+    /// Performs an authenticated update request to the configured DynDNS v1 server for `hostname` with the given `ip`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the update succeeded; `Err` with an error describing the failure otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Example usage (networking calls are ignored in doctests)
+    /// let client = /* obtain a configured Dyndns1Client instance */;
+    /// client.update_record("example.dyndns.org", "1.2.3.4".parse().unwrap())?;
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating {} with DynDNS v1", hostname);
 
@@ -93,6 +134,18 @@ impl DnsClient for Dyndns1Client {
         }
     }
 
+    /// Validates that the client's configuration contains both username and password.
+    ///
+    /// Returns `Ok(())` if both username and password are non-empty; otherwise returns an `Err` with a message
+    /// indicating the missing field ("username is required for DynDNS v1" or "password is required for DynDNS v1").
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // After creating a client (e.g. via Dyndns1Client::new), call validate_config to ensure credentials are present.
+    /// // let client = Dyndns1Client::new(&config).unwrap();
+    /// // client.validate_config().unwrap();
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for DynDNS v1".into());
@@ -103,6 +156,17 @@ impl DnsClient for Dyndns1Client {
         Ok(())
     }
 
+    /// Human-readable provider name for this client.
+    ///
+    /// Returns the provider name string: `"DynDNS v1"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // The provider identifier used by this client implementation.
+    /// let name = "DynDNS v1";
+    /// assert_eq!(name, "DynDNS v1");
+    /// ```
     fn provider_name(&self) -> &str {
         "DynDNS v1"
     }

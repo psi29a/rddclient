@@ -11,6 +11,22 @@ pub struct DomeneshopClient {
 }
 
 impl DomeneshopClient {
+    /// Creates a new DomeneshopClient from a configuration.
+    ///
+    /// The function extracts the required `login` (used as username) and `password` (used as API secret)
+    /// from `config`, and uses `config.server` if present or `https://api.domeneshop.no` as a default.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(DomeneshopClient)` when both username and password are present; `Err` containing a message
+    /// when either the username (`login`) or password is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // let config = Config { login: Some("user".into()), password: Some("secret".into()), server: None };
+    /// // let client = DomeneshopClient::new(&config).unwrap();
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("Domeneshop requires username (API token)")?
@@ -30,6 +46,24 @@ impl DomeneshopClient {
 }
 
 impl DnsClient for DomeneshopClient {
+    /// Updates the DNS A record for `hostname` to the provided `ip` using the Domeneshop DynDNS API.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the update succeeded (HTTP status 200 or 204 and response empty or containing `good`/`nochg`).
+    /// `Err` when the request returned a non-200/204 status, when the response contains `badauth` (invalid credentials), `nohost` (hostname not found), or any other failure message.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// let client = DomeneshopClient {
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    ///     server: "https://api.domeneshop.no".into(),
+    /// };
+    /// client.update_record("example.com", "1.2.3.4".parse::<IpAddr>().unwrap()).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let auth = general_purpose::STANDARD.encode(format!("{}:{}", self.username, self.password));
         
@@ -62,6 +96,21 @@ impl DnsClient for DomeneshopClient {
         }
     }
 
+    /// Validates that the client has the required credentials configured.
+    ///
+    /// Returns `Ok(())` when both username and password are non-empty, `Err` with a
+    /// descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DomeneshopClient {
+    ///     username: String::from("user"),
+    ///     password: String::from("pass"),
+    ///     server: String::from("https://api.domeneshop.no"),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("Domeneshop username cannot be empty".into());
@@ -72,6 +121,14 @@ impl DnsClient for DomeneshopClient {
         Ok(())
     }
 
+    /// Get the DNS provider's name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DomeneshopClient { username: "u".into(), password: "p".into(), server: "https://api.domeneshop.no".into() };
+    /// assert_eq!(client.provider_name(), "Domeneshop");
+    /// ```
     fn provider_name(&self) -> &str {
         "Domeneshop"
     }

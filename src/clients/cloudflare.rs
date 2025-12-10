@@ -14,6 +14,29 @@ pub struct CloudflareClient {
 }
 
 impl CloudflareClient {
+    /// Creates a CloudflareClient from configuration, validating required fields and applying defaults.
+    ///
+    /// The provided `config` must include `login` (email or the literal `"token"`), `password` (API token or global API key),
+    /// and `zone` (DNS zone, e.g. `"example.com"`). If `server` is not set it defaults to `"api.cloudflare.com/client/v4"`.
+    /// If `ttl` is not set it defaults to `1`.
+    ///
+    /// # Parameters
+    ///
+    /// - `config`: Source configuration containing Cloudflare credentials and options.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(CloudflareClient)` with fields populated from `config` when required values are present; an `Err` describing the missing
+    /// required field otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_test_config(); // test helper that sets login="token", password="test_api_token_12345", zone="example.com"
+    /// let client = CloudflareClient::new(&cfg).unwrap();
+    /// assert_eq!(client.server, "api.cloudflare.com/client/v4");
+    /// assert_eq!(client.ttl, 300);
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let login = config.login.as_ref()
             .ok_or("login is required for Cloudflare (email or 'token')")?
@@ -37,6 +60,25 @@ impl CloudflareClient {
         })
     }
 
+    /// Retrieve the Cloudflare zone ID for the configured zone.
+    ///
+    /// Returns the zone ID string on success. Returns an error if the HTTP request fails,
+    /// the Cloudflare response indicates failure, or no matching zone is found in the response.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Construct a client (fields shown for illustration; use CloudflareClient::new in real code)
+    /// let client = CloudflareClient {
+    ///     login: "token".into(),
+    ///     password: "test_api_token".into(),
+    ///     zone: "example.com".into(),
+    ///     server: "api.cloudflare.com/client/v4".into(),
+    ///     ttl: 1,
+    /// };
+    /// let zone_id = client.get_zone_id().expect("failed to get zone id");
+    /// println!("zone id: {}", zone_id);
+    /// ```
     fn get_zone_id(&self) -> Result<String, Box<dyn Error>> {
         log::info!("Getting Cloudflare Zone ID for zone: {}", self.zone);
 
@@ -71,6 +113,27 @@ impl CloudflareClient {
         Ok(zone_id)
     }
 
+    /// Retrieve the Cloudflare DNS record ID for the specified zone, hostname, and record type.
+    ///
+    /// Calls Cloudflare's API to locate a DNS record matching `record_type` and `hostname` within `zone_id` and returns its record identifier.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API response indicates failure, if no matching record is found, or if the HTTP request / response cannot be processed.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let client = CloudflareClient {
+    ///     login: "token".into(),
+    ///     password: "test_api_token_12345".into(),
+    ///     zone: "example.com".into(),
+    ///     server: "api.cloudflare.com/client/v4".into(),
+    ///     ttl: 300,
+    /// };
+    /// let record_id = client.get_record_id("zone_id", "ddns.example.com", "A").unwrap();
+    /// println!("Record ID: {}", record_id);
+    /// ```
     fn get_record_id(&self, zone_id: &str, hostname: &str, record_type: &str) -> Result<String, Box<dyn Error>> {
         log::info!("Fetching DNS {} record for: {}", record_type, hostname);
 
@@ -109,6 +172,25 @@ impl CloudflareClient {
 }
 
 impl DnsClient for CloudflareClient {
+    /// Update the DNS record for `hostname` to the provided IP address on Cloudflare.
+    ///
+    /// Attempts to determine the correct record type (A for IPv4, AAAA for IPv6), look up the zone
+    /// and record IDs, and send an authenticated update request to the Cloudflare API using either
+    /// a token (Bearer) or email/key headers depending on client configuration.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    ///
+    /// // `client` must be a configured `CloudflareClient` (constructed via `CloudflareClient::new`).
+    /// let client: CloudflareClient = /* construct configured client */;
+    /// client.update_record("ddns.example.com", "1.2.3.4".parse::<IpAddr>().unwrap()).unwrap();
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the DNS record was updated successfully, `Err` otherwise.
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         // Determine record type based on IP version
         let record_type = match ip {
@@ -159,6 +241,31 @@ impl DnsClient for CloudflareClient {
         Ok(())
     }
 
+    /// Validates that the client has the required Cloudflare configuration fields.
+    ///
+    /// Ensures `login`, `password`, and `zone` are not empty; returns an error describing the missing field if any are empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = CloudflareClient {
+    ///     login: "token".into(),
+    ///     password: "api_token".into(),
+    ///     zone: "example.com".into(),
+    ///     server: "api.cloudflare.com/client/v4".into(),
+    ///     ttl: 300,
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    ///
+    /// let bad = CloudflareClient {
+    ///     login: "".into(),
+    ///     password: "".into(),
+    ///     zone: "".into(),
+    ///     server: "".into(),
+    ///     ttl: 0,
+    /// };
+    /// assert!(bad.validate_config().is_err());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.login.is_empty() {
             return Err("login is required for Cloudflare (email or 'token')".into());
@@ -172,6 +279,24 @@ impl DnsClient for CloudflareClient {
         Ok(())
     }
 
+    /// Returns the provider name for this DNS client.
+    ///
+    /// # Returns
+    ///
+    /// The provider identifier string `"Cloudflare"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = CloudflareClient {
+    ///     login: String::from("token"),
+    ///     password: String::from("t"),
+    ///     zone: String::from("example.com"),
+    ///     server: String::from("api.cloudflare.com/client/v4"),
+    ///     ttl: 1,
+    /// };
+    /// assert_eq!(client.provider_name(), "Cloudflare");
+    /// ```
     fn provider_name(&self) -> &str {
         "Cloudflare"
     }
@@ -181,6 +306,23 @@ impl DnsClient for CloudflareClient {
 mod tests {
     use super::*;
 
+    /// Create a Config pre-populated for Cloudflare-based tests.
+    ///
+    /// The returned Config sets protocol to "cloudflare", login to "token",
+    /// password to "test_api_token_12345", zone to "example.com", host to
+    /// "ddns.example.com", and ttl to 300.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_test_config();
+    /// assert_eq!(cfg.protocol.as_deref(), Some("cloudflare"));
+    /// assert_eq!(cfg.login.as_deref(), Some("token"));
+    /// assert_eq!(cfg.password.as_deref(), Some("test_api_token_12345"));
+    /// assert_eq!(cfg.zone.as_deref(), Some("example.com"));
+    /// assert_eq!(cfg.host.as_deref(), Some("ddns.example.com"));
+    /// assert_eq!(cfg.ttl, Some(300));
+    /// ```
     fn create_test_config() -> Config {
         Config {
             protocol: Some("cloudflare".to_string()),

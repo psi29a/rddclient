@@ -13,6 +13,27 @@ pub struct InfomaniakClient {
 }
 
 impl InfomaniakClient {
+    /// Creates a new InfomaniakClient from configuration values.
+    ///
+    /// The `login` and `password` fields in `config` are required and will cause an error
+    /// if missing. The `server` field is optional and defaults to `https://infomaniak.com`
+    /// when not provided.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if `config.login` or `config.password` is `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let cfg = Config {
+    ///     login: Some("user@example.com".into()),
+    ///     password: Some("s3cr3t".into()),
+    ///     server: None,
+    /// };
+    /// let client = InfomaniakClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "Infomaniak");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Infomaniak")?
@@ -34,6 +55,29 @@ impl InfomaniakClient {
 }
 
 impl DnsClient for InfomaniakClient {
+    /// Update the DNS record for a hostname at Infomaniak using the DynDNS2-style update endpoint.
+    ///
+    /// Sends a GET request to the provider's /nic/update endpoint with Basic authentication and
+    /// interprets DynDNS2-style responses to determine success or a specific failure.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the provider reports the update as successful (`good` or `nochg`); `Err` with a
+    /// descriptive message for HTTP errors or any provider-reported failure (e.g., authentication
+    /// failure, invalid hostname, nonexistent host, abuse, server error, or an unexpected response).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::net::IpAddr;
+    /// # use std::str::FromStr;
+    /// # // `client` would be an instance of InfomaniakClient constructed elsewhere.
+    /// # fn example_call(client: &crate::clients::infomaniak::InfomaniakClient) {
+    /// let hostname = "host.example.com";
+    /// let ip = IpAddr::from_str("1.2.3.4").unwrap();
+    /// client.update_record(hostname, ip).unwrap();
+    /// # }
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/nic/update?hostname={}&myip={}",
@@ -76,6 +120,16 @@ impl DnsClient for InfomaniakClient {
         }
     }
 
+    /// Ensures the client has both username and password configured.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty, `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = InfomaniakClient { server: "https://infomaniak.com".into(), username: "user".into(), password: "pass".into() };
+    /// client.validate_config().unwrap();
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Infomaniak".into());
@@ -86,6 +140,16 @@ impl DnsClient for InfomaniakClient {
         Ok(())
     }
 
+    /// Gets the DNS provider's canonical name.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // Construct a client (example assumes `Config` and `InfomaniakClient::new` are available).
+    /// let config = /* obtain or build a Config */ unimplemented!();
+    /// let client = crate::clients::InfomaniakClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "Infomaniak");
+    /// ```
     fn provider_name(&self) -> &str {
         "Infomaniak"
     }

@@ -11,6 +11,27 @@ pub struct ChangeipClient {
 }
 
 impl ChangeipClient {
+    /// Creates a new `ChangeipClient` from the given configuration, validating required credentials.
+    ///
+    /// The `server` field in the configuration defaults to `"nic.changeip.com"` when not provided.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` if the configuration does not include a username or password.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Assuming `Config` has `login`, `password`, and optional `server` fields:
+    /// let config = Config {
+    ///     login: Some("user".into()),
+    ///     password: Some("pass".into()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = ChangeipClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "ChangeIP");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for ChangeIP")?;
@@ -28,6 +49,26 @@ impl ChangeipClient {
 }
 
 impl DnsClient for ChangeipClient {
+    /// Update the DNS A record for `hostname` at ChangeIP to the provided IP address.
+    ///
+    /// Sends an authenticated request to the ChangeIP API and interprets the JSON response:
+    /// - returns `Ok(())` when the API indicates success or that the record was already unaltered;
+    /// - returns `Err` with the provider error message when the API reports failure;
+    /// - returns `Err` if the HTTP response code is not 200 or the response body is unexpected.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// // Construct a client (example fields); in real usage obtain via `ChangeipClient::new`.
+    /// let client = ChangeipClient {
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    ///     server: "nic.changeip.com".into(),
+    /// };
+    /// let ip: IpAddr = "203.0.113.42".parse().unwrap();
+    /// let _ = client.update_record("example.com", ip);
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating ChangeIP record for {} to {}", hostname, ip);
 
@@ -68,6 +109,20 @@ impl DnsClient for ChangeipClient {
         }
     }
 
+    /// Validates that the client's username and password are present.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty, `Err` with a message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = ChangeipClient {
+    ///     username: "user".to_string(),
+    ///     password: "pass".to_string(),
+    ///     server: "nic.changeip.com".to_string(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("ChangeIP username cannot be empty".into());
@@ -78,6 +133,18 @@ impl DnsClient for ChangeipClient {
         Ok(())
     }
 
+    /// Provider name for this DNS client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::changeip::ChangeipClient {
+    ///     username: String::new(),
+    ///     password: String::new(),
+    ///     server: "nic.changeip.com".into(),
+    /// };
+    /// assert_eq!(client.provider_name(), "ChangeIP");
+    /// ```
     fn provider_name(&self) -> &'static str {
         "ChangeIP"
     }

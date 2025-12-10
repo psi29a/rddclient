@@ -14,6 +14,30 @@ pub struct LuadnsClient {
 }
 
 impl LuadnsClient {
+    /// Creates a new `LuadnsClient` from the provided `Config`, validating required fields and using a default API server if none is specified.
+    ///
+    /// The function extracts `login` (email), `password` (API token), `zone`, and `host` (record ID) from `config` and returns an error if any of these are missing. If `config.server` is `None`, the server defaults to `https://api.luadns.com`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(LuadnsClient)` when all required configuration fields are present, or `Err` with a descriptive message when a required field is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Construct a minimal Config with required fields.
+    /// let config = Config {
+    ///     login: Some("user@example.com".to_string()),
+    ///     password: Some("secret-token".to_string()),
+    ///     zone: Some("zone-id".to_string()),
+    ///     host: Some("record-id".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let client = LuadnsClient::new(&config).expect("valid config");
+    /// assert_eq!(client.provider_name(), "LuaDNS");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let email = config.login.as_ref()
             .ok_or("username (email) is required for LuaDNS")?
@@ -45,6 +69,28 @@ impl LuadnsClient {
 }
 
 impl DnsClient for LuadnsClient {
+    /// Update the DNS record for a hostname to the provided IP address using the LuaDNS REST API.
+    ///
+    /// On success the record is updated on the remote provider and the method returns `Ok(())`.
+    /// If the API responds with an error payload the function returns `Err` containing the API body;
+    /// for other non-200 HTTP responses it returns `Err` containing the numeric status code.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    ///
+    /// let client = LuadnsClient {
+    ///     server: "https://api.luadns.com".into(),
+    ///     email: "user@example.com".into(),
+    ///     token: "token".into(),
+    ///     zone_id: "zone".into(),
+    ///     record_id: "record".into(),
+    /// };
+    ///
+    /// // IPv4 example
+    /// client.update_record("host.example.com", "1.2.3.4".parse::<IpAddr>().unwrap()).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let record_type = match ip {
             IpAddr::V4(_) => "A",
@@ -89,6 +135,26 @@ impl DnsClient for LuadnsClient {
         }
     }
 
+    /// Validates that required LuaDNS configuration fields are present.
+    ///
+    /// Checks that `email`, `token`, `zone_id`, and `record_id` are not empty.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if all required fields are non-empty; `Err` with a descriptive message if any field is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = LuadnsClient {
+    ///     server: "https://api.luadns.com".into(),
+    ///     email: "user@example.com".into(),
+    ///     token: "secret".into(),
+    ///     zone_id: "zone123".into(),
+    ///     record_id: "rec456".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.email.is_empty() {
             return Err("username (email) is required for LuaDNS".into());
@@ -105,6 +171,24 @@ impl DnsClient for LuadnsClient {
         Ok(())
     }
 
+    /// Get the DNS provider name for this client.
+    ///
+    /// # Returns
+    ///
+    /// The provider name `"LuaDNS"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = LuadnsClient {
+    ///     server: String::new(),
+    ///     email: String::new(),
+    ///     token: String::new(),
+    ///     zone_id: String::new(),
+    ///     record_id: String::new(),
+    /// };
+    /// assert_eq!(client.provider_name(), "LuaDNS");
+    /// ```
     fn provider_name(&self) -> &str {
         "LuaDNS"
     }
@@ -113,6 +197,14 @@ impl DnsClient for LuadnsClient {
 mod base64 {
     use base64::{Engine as _, engine::general_purpose};
     
+    /// Encodes the given string into Base64 using the standard encoding.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let out = encode("hello");
+    /// assert_eq!(out, "aGVsbG8=");
+    /// ```
     pub fn encode(data: &str) -> String {
         general_purpose::STANDARD.encode(data.as_bytes())
     }

@@ -13,6 +13,23 @@ pub struct NoIpClient {
 }
 
 impl NoIpClient {
+    /// Creates a NoIpClient from a configuration, requiring username and password and using
+    /// "https://dynupdate.no-ip.com" as the default update server when none is provided.
+    ///
+    /// Returns an error if `config.login` or `config.password` is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// let cfg = Config {
+    ///     login: Some("user".into()),
+    ///     password: Some("pass".into()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = NoIpClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "No-IP");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for No-IP")?
@@ -34,6 +51,19 @@ impl NoIpClient {
 }
 
 impl DnsClient for NoIpClient {
+    /// Update the DNS record for `hostname` at the configured No‑IP server to the given `ip`.
+    ///
+    /// On success returns `Ok(())`. On error returns a boxed `Error` describing the failure; common failure reasons include authentication errors, unknown hostname, client disabled/blocked responses, server errors, or an unexpected response body.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use std::net::IpAddr;
+    /// # use crate::clients::noip::NoIpClient;
+    /// # // Create a NoIpClient via NoIpClient::new(...) in real code.
+    /// let ip: IpAddr = "1.2.3.4".parse().unwrap();
+    /// // client.update_record("host.example.com", ip).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/nic/update?hostname={}&myip={}",
@@ -65,6 +95,16 @@ impl DnsClient for NoIpClient {
         }
     }
 
+    /// Ensures the client has the required credentials for No‑IP.
+    ///
+    /// Returns `Ok(())` when both username and password are non-empty, or an `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = NoIpClient { username: "user".into(), password: "pass".into(), server: "https://dynupdate.no-ip.com".into() };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for No-IP".into());
@@ -75,6 +115,17 @@ impl DnsClient for NoIpClient {
         Ok(())
     }
 
+    /// Provider identifier for this DNS client.
+    ///
+    /// This returns the human-readable name of the provider implemented by this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Given a configured `NoIpClient`:
+    /// // let client = NoIpClient::new(&config).unwrap();
+    /// // assert_eq!(client.provider_name(), "No-IP");
+    /// ```
     fn provider_name(&self) -> &str {
         "No-IP"
     }
@@ -84,6 +135,24 @@ impl DnsClient for NoIpClient {
 mod tests {
     use super::*;
 
+    /// Builds a Config populated with typical test values for the No-IP client.
+    ///
+    /// The returned `Config` contains:
+    /// - `protocol = Some("noip")`
+    /// - `login = Some("testuser")`
+    /// - `password = Some("testpass")`
+    /// - `host = Some("myhost.no-ip.com")`
+    /// All other fields are left as their `Default` values.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_test_config();
+    /// assert_eq!(cfg.protocol.as_deref(), Some("noip"));
+    /// assert_eq!(cfg.login.as_deref(), Some("testuser"));
+    /// assert_eq!(cfg.password.as_deref(), Some("testpass"));
+    /// assert_eq!(cfg.host.as_deref(), Some("myhost.no-ip.com"));
+    /// ```
     fn create_test_config() -> Config {
         Config {
             protocol: Some("noip".to_string()),

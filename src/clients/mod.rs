@@ -68,7 +68,19 @@ pub trait DnsClient {
     fn provider_name(&self) -> &str;
 }
 
-/// Factory function to create the appropriate DNS client based on provider type
+/// Create a DNS client implementation for the given provider identifier.
+///
+/// Returns a boxed implementation of `DnsClient` for recognized provider names (case-insensitive).
+/// On unsupported providers returns an `Err` with a message listing supported providers.
+///
+/// # Examples
+///
+/// ```
+/// // Construct a Config appropriate for your environment; here we assume a default is available.
+/// let config = crate::config::Config::default();
+/// let client = create_client("cloudflare", &config).expect("provider supported");
+/// assert_eq!(client.provider_name(), "cloudflare");
+/// ```
 pub fn create_client(provider: &str, config: &crate::config::Config) -> Result<Box<dyn DnsClient>, Box<dyn Error>> {
     match provider.to_lowercase().as_str() {
         "1984" | "one984" => Ok(Box::new(one984::One984Client::new(config)?)),

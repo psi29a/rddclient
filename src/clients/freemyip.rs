@@ -11,6 +11,32 @@ pub struct FreemyipClient {
 }
 
 impl FreemyipClient {
+    /// Create a `FreemyipClient` from the provided configuration.
+    ///
+    /// The function extracts the required token from `config.password` and uses
+    /// `config.server` if present; otherwise it defaults the server to
+    /// "https://freemyip.com".
+    ///
+    /// # Parameters
+    ///
+    /// - `config`: Configuration containing `password` (token) and optional `server`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(FreemyipClient)` initialized with the resolved server and token, or an
+    /// `Err` if the configuration does not contain the required token.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = Config {
+    ///     password: Some("my-token".to_string()),
+    ///     server: Some("https://freemyip.com".to_string()),
+    ///     ..Default::default()
+    /// };
+    /// let client = FreemyipClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "Freemyip");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
             .ok_or("password (token) is required for Freemyip")?
@@ -28,6 +54,23 @@ impl FreemyipClient {
 }
 
 impl DnsClient for FreemyipClient {
+    /// Update the DNS record for `hostname` at the Freemyip service.
+    ///
+    /// Performs an HTTP GET against the configured Freemyip server using the client's token and the given hostname.
+    /// On success, logs and returns `Ok(())`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the provider acknowledged the update (`SUCCESS`, `UPDATED`, or `OK` in the response);
+    /// `Err` if the HTTP status is not 200, the response contains `ERROR`, or the response is otherwise unexpected — the error contains the HTTP status or provider body.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// // Construct a FreemyipClient (example omitted) and call update_record:
+    /// // let client = FreemyipClient::new(&config).unwrap();
+    /// // client.update_record("example.com", "1.2.3.4".parse().unwrap()).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/update?token={}&domain={}",
@@ -60,6 +103,19 @@ impl DnsClient for FreemyipClient {
         }
     }
 
+    /// Validates that the client has a non-empty token.
+    ///
+    /// Returns `Err` if the client's token is an empty string; otherwise returns `Ok(())`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let good = FreemyipClient { server: "https://freemyip.com".into(), token: "token".into() };
+    /// assert!(good.validate_config().is_ok());
+    ///
+    /// let bad = FreemyipClient { server: "https://freemyip.com".into(), token: "".into() };
+    /// assert!(bad.validate_config().is_err());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.token.is_empty() {
             return Err("password (token) is required for Freemyip".into());
@@ -67,6 +123,18 @@ impl DnsClient for FreemyipClient {
         Ok(())
     }
 
+    /// Provider name for this DNS client.
+    ///
+    /// # Returns
+    ///
+    /// The provider name, `"Freemyip"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::freemyip::FreemyipClient { server: String::new(), token: String::new() };
+    /// assert_eq!(client.provider_name(), "Freemyip");
+    /// ```
     fn provider_name(&self) -> &str {
         "Freemyip"
     }

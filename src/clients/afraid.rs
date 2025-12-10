@@ -11,6 +11,26 @@ pub struct AfraidClient {
 }
 
 impl AfraidClient {
+    /// Creates an AfraidClient from configuration by extracting the update token and server URL.
+    ///
+    /// The function requires `config.password` to contain the Afraid.org update token; if `config.server` is
+    /// present it will be used as the API server URL, otherwise `https://freedns.afraid.org` is used.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `config.password` is `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = Config {
+    ///     password: Some("update-token".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = AfraidClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "Afraid.org");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
             .ok_or("api_token (update token) is required for Afraid.org")?
@@ -27,6 +47,25 @@ impl AfraidClient {
 }
 
 impl DnsClient for AfraidClient {
+    /// Update the DNS record for `hostname` to the given IP using the Afraid.org dynamic DNS API.
+    ///
+    /// Sends a GET request to the Afraid.org API with the client's configured token and the provided
+    /// hostname and IP, and treats responses containing "Updated" or "has not changed" as success.
+    /// Returns an error if the HTTP status is not 200, the provider returns an `ERROR` message, or
+    /// the response is otherwise unexpected.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success; `Err` containing a description of the HTTP or provider error otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // Example usage (network call; ignored in doctest):
+    /// let client = AfraidClient::new(&config).unwrap();
+    /// let ip: std::net::IpAddr = "203.0.113.42".parse().unwrap();
+    /// client.update_record("example.com", ip).expect("update failed");
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         log::info!("Updating {} with Afraid.org", hostname);
 
@@ -59,6 +98,9 @@ impl DnsClient for AfraidClient {
         }
     }
 
+    /// Validates that the client has a configured Afraid.org update token.
+    ///
+    /// Returns `Ok(())` if the client's update token is non-empty; returns `Err` with an explanatory message otherwise.
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.token.is_empty() {
             return Err("api_token (update token) is required for Afraid.org".into());
@@ -66,6 +108,11 @@ impl DnsClient for AfraidClient {
         Ok(())
     }
 
+    /// DNS provider identifier for this client.
+    ///
+    /// # Returns
+    ///
+    /// `&str` containing the provider name "Afraid.org".
     fn provider_name(&self) -> &str {
         "Afraid.org"
     }

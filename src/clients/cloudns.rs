@@ -8,6 +8,19 @@ pub struct CloudnsClient {
 }
 
 impl CloudnsClient {
+    /// Create a new CloudnsClient using the dynamic URL from the provided config.
+    ///
+    /// The constructor uses `config.password` if present, otherwise `config.server`. Returns an error
+    /// if neither contains a value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::{clients::cloudns::CloudnsClient, Config};
+    ///
+    /// let cfg = Config { password: Some("https://dyn.example/update".into()), server: None, ..Default::default() };
+    /// let client = CloudnsClient::new(&cfg).expect("should create client");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         // ClouDNS uses a unique dynamic URL per host
         let dynurl = config.password.as_ref()
@@ -22,6 +35,24 @@ impl CloudnsClient {
 }
 
 impl DnsClient for CloudnsClient {
+    /// Update the DNS record at the configured ClouDNS dynamic URL to the provided IP address.
+    ///
+    /// Sends an HTTP GET to the client's dynurl with a `myip` query parameter and interprets
+    /// common ClouDNS response keywords to determine success.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on a detected successful update; `Err` containing a descriptive message on HTTP
+    /// errors or explicit failure responses from the provider.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// let client = CloudnsClient { dynurl: "https://example.com/update?auth=token".into() };
+    /// let ip: IpAddr = "203.0.113.42".parse().unwrap();
+    /// assert!(client.update_record("ignored-hostname", ip).is_ok());
+    /// ```
     fn update_record(&self, _hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         // ClouDNS dynurl already contains the hostname, just append IP
         let url = if self.dynurl.contains('?') {
@@ -58,6 +89,20 @@ impl DnsClient for CloudnsClient {
         }
     }
 
+    /// Validates the configured ClouDNS dynamic URL.
+    ///
+    /// Ensures the client's `dynurl` is not empty and begins with `http://` or `https://`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if `dynurl` passes validation; `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = CloudnsClient { dynurl: "https://dyn.example.com/update".into() };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.dynurl.is_empty() {
             return Err("ClouDNS dynurl cannot be empty".into());
@@ -68,6 +113,14 @@ impl DnsClient for CloudnsClient {
         Ok(())
     }
 
+    /// Provider display name for this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = CloudnsClient { dynurl: "http://example".to_string() };
+    /// assert_eq!(client.provider_name(), "ClouDNS");
+    /// ```
     fn provider_name(&self) -> &str {
         "ClouDNS"
     }

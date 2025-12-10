@@ -20,6 +20,24 @@ pub struct DynDns2Client {
 }
 
 impl DynDns2Client {
+    /// Constructs a `DynDns2Client` from the provided configuration.
+    ///
+    /// The `login` and `password` fields of `config` are required; this function returns
+    /// an `Err` if either is missing. If `server` is not provided, the default
+    /// "https://members.dyndns.org" is used and the update script path is set to "/nic/update".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = crate::Config {
+    ///     login: Some("user".to_string()),
+    ///     password: Some("pass".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = crate::clients::dyndns2::DynDns2Client::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "DynDNS2");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for DynDNS2")?
@@ -44,6 +62,31 @@ impl DynDns2Client {
 }
 
 impl DnsClient for DynDns2Client {
+    /// Updates the DNS record for `hostname` to the provided `ip` using the DynDNS2 protocol.
+    ///
+    /// Sends an authenticated HTTP GET to the provider's DynDNS2 update endpoint and interprets
+    /// the provider response. On success this will log and return Ok(()); on failure it returns
+    /// an error describing the HTTP or protocol-level failure (for example `badauth`, `nohost`,
+    /// `notfqdn`, or an unknown response body).
+    ///
+    /// # Arguments
+    ///
+    /// * `hostname` - The DNS host name to update (e.g. "host.example.com").
+    /// * `ip` - The IP address to assign to `hostname`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the update succeeded or the provider reported no change; `Err(...)` if the HTTP
+    /// response code is not 200 or the provider returned an error status.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::net::IpAddr;
+    /// // Assuming `client` is an initialized DynDns2Client:
+    /// // let client = DynDns2Client::new(&config).unwrap();
+    /// // client.update_record("ddns.example.com", "203.0.113.5".parse::<IpAddr>().unwrap()).unwrap();
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}{}?hostname={}&myip={}",
@@ -101,6 +144,21 @@ impl DnsClient for DynDns2Client {
         }
     }
 
+    /// Ensures the client has both a username and a password configured.
+    ///
+    /// Returns `Ok(())` if both `username` and `password` are non-empty, `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::dyndns2::DynDns2Client {
+    ///     server: "https://members.dyndns.org".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    ///     script: "/nic/update".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for DynDNS2".into());
@@ -111,6 +169,18 @@ impl DnsClient for DynDns2Client {
         Ok(())
     }
 
+    /// Provider identifier for this client.
+    ///
+    /// # Returns
+    ///
+    /// The provider name string: `"DynDNS2"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let name = "DynDNS2";
+    /// assert_eq!(name, "DynDNS2");
+    /// ```
     fn provider_name(&self) -> &str {
         "DynDNS2"
     }

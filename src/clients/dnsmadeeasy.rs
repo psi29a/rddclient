@@ -12,6 +12,25 @@ pub struct DnsMadeEasyClient {
 }
 
 impl DnsMadeEasyClient {
+    /// Constructs a `DnsMadeEasyClient` from configuration values.
+    ///
+    /// Requires `config.login` and `config.password`; if `config.server` is absent the
+    /// default `"https://cp.dnsmadeeasy.com"` is used. Returns an error with the
+    /// messages `"username is required for DNS Made Easy"` or
+    /// `"password is required for DNS Made Easy"` when the respective fields are missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // `Config` is expected to have `login`, `password`, and optional `server`.
+    /// let cfg = Config {
+    ///     login: Some("alice".into()),
+    ///     password: Some("s3cr3t".into()),
+    ///     server: None,
+    /// };
+    /// let client = DnsMadeEasyClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "DNS Made Easy");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for DNS Made Easy")?
@@ -33,6 +52,25 @@ impl DnsMadeEasyClient {
 }
 
 impl DnsClient for DnsMadeEasyClient {
+    /// Updates the DNS A record for `hostname` to the provided `ip` using DNS Made Easy's dynamic update endpoint.
+    ///
+    /// Sends an HTTP GET to the provider's update URL, checks the HTTP status, and interprets the provider response to determine success.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::dnsmadeeasy::DnsMadeEasyClient {
+    ///     server: "https://cp.dnsmadeeasy.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// let ip = std::net::IpAddr::V4(std::net::Ipv4Addr::new(1, 2, 3, 4));
+    /// let _ = client.update_record("example.com", ip);
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on successful update; `Err` with a descriptive message for HTTP errors, provider-reported errors, or unexpected responses.
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         // DNS Made Easy dynamic DNS endpoint
         let url = format!(
@@ -66,6 +104,22 @@ impl DnsClient for DnsMadeEasyClient {
         }
     }
 
+    /// Ensures the client has both a username and password configured.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if both `username` and `password` are non-empty, `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DnsMadeEasyClient {
+    ///     server: "https://cp.dnsmadeeasy.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for DNS Made Easy".into());
@@ -76,6 +130,22 @@ impl DnsClient for DnsMadeEasyClient {
         Ok(())
     }
 
+    /// Provider display name for the DNS Made Easy client.
+    ///
+    /// # Returns
+    ///
+    /// `"DNS Made Easy"` — the provider name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::dnsmadeeasy::DnsMadeEasyClient {
+    ///     server: String::new(),
+    ///     username: String::new(),
+    ///     password: String::new(),
+    /// };
+    /// assert_eq!(client.provider_name(), "DNS Made Easy");
+    /// ```
     fn provider_name(&self) -> &str {
         "DNS Made Easy"
     }

@@ -38,6 +38,14 @@ pub struct HostState {
 }
 
 impl HostState {
+    /// Creates a HostState with all fields unset (no IP, timestamps, or status).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s = HostState::new();
+    /// assert!(s.ip.is_none() && s.mtime.is_none() && s.status.is_none());
+    /// ```
     pub fn new() -> Self {
         Self {
             ip: None,
@@ -48,7 +56,25 @@ impl HostState {
         }
     }
     
-    /// Check if IP has changed
+    /// Determines whether the provided IP differs from the cached IP.
+    ///
+    /// Returns `true` if there is no cached IP or if `new_ip` is different from the cached IP, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::{IpAddr, Ipv4Addr};
+    ///
+    /// let mut state = HostState::new();
+    /// let ip = IpAddr::V4(Ipv4Addr::new(1, 2, 3, 4));
+    ///
+    /// // No cached IP => considered changed
+    /// assert!(state.ip_changed(ip));
+    ///
+    /// // Set cached IP to the same value => not changed
+    /// state.ip = Some(ip);
+    /// assert!(!state.ip_changed(ip));
+    /// ```
     pub fn ip_changed(&self, new_ip: IpAddr) -> bool {
         match self.ip {
             Some(cached_ip) => cached_ip != new_ip,
@@ -56,7 +82,23 @@ impl HostState {
         }
     }
     
-    /// Update state after successful DNS update
+    /// Record a successful update for this host's state.
+    ///
+    /// Sets the stored IP address, records the current timestamp as the last successful
+    /// update time, stores the provided status message, and clears any previous error time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    /// let mut s = crate::state::HostState::new();
+    /// let ip: IpAddr = "127.0.0.1".parse().unwrap();
+    /// s.update_success(ip, "good".to_string());
+    /// assert!(s.ip.is_some());
+    /// assert_eq!(s.status.as_deref(), Some("good"));
+    /// assert!(s.mtime.is_some());
+    /// assert!(s.atime.is_none());
+    /// ```
     pub fn update_success(&mut self, ip: IpAddr, status: String) {
         self.ip = Some(ip);
         self.mtime = Some(current_timestamp());
@@ -64,7 +106,18 @@ impl HostState {
         self.atime = None;  // Reset error counter on success
     }
     
-    /// Update state after failed DNS update
+    /// Records a failed update for this host by setting a failure status and recording the failure time.
+    ///
+    /// Sets `status` to `"FAILED: {error}"` and sets `atime` to the current Unix timestamp (seconds).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut s = crate::state::HostState::new();
+    /// s.update_failure("timeout".to_string());
+    /// assert!(s.status.as_ref().unwrap().starts_with("FAILED: timeout"));
+    /// assert!(s.atime.is_some());
+    /// ```
     pub fn update_failure(&mut self, error: String) {
         self.status = Some(format!("FAILED: {}", error));
         self.atime = Some(current_timestamp());
@@ -72,6 +125,18 @@ impl HostState {
 }
 
 impl Default for HostState {
+    /// Creates a HostState with all fields set to `None`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s = HostState::default();
+    /// assert!(s.ip.is_none());
+    /// assert!(s.mtime.is_none());
+    /// assert!(s.status.is_none());
+    /// assert!(s.atime.is_none());
+    /// assert!(s.wtime.is_none());
+    /// ```
     fn default() -> Self {
         Self::new()
     }
@@ -84,7 +149,21 @@ pub struct StateManager {
 }
 
 impl StateManager {
-    /// Create new state manager with cache file path
+    /// Creates a new `StateManager`, determining the cache file and loading any existing state.
+    ///
+    /// If `cache_file` is `None`, a platform-appropriate default cache path is selected. If the
+    /// resolved cache file exists, its contents are loaded into the manager.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::path::PathBuf;
+    /// // Provide a specific cache file:
+    /// let mgr = rddclient::state::StateManager::new(Some(PathBuf::from("/tmp/rddclient.cache"))).unwrap();
+    ///
+    /// // Or let the manager pick a default platform path:
+    /// let mgr_default = rddclient::state::StateManager::new(None).unwrap();
+    /// ```
     pub fn new(cache_file: Option<PathBuf>) -> Result<Self, Box<dyn Error>> {
         let cache_file = match cache_file {
             Some(path) => path,
@@ -104,7 +183,23 @@ impl StateManager {
         Ok(manager)
     }
     
-    /// Get default cache file path based on platform
+    /// Determine the platform-appropriate default path for the rddclient state cache.
+    ///
+    /// Tries a system-wide location first (where applicable) and falls back to a per-user cache
+    /// location. On Linux and macOS this prefers /var/cache/rddclient/rddclient.cache if the
+    /// directory exists or can be created; otherwise it uses a user cache directory. On Windows
+    /// it uses the user's cache directory under the platform-provided cache location.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let path = default_cache_path().unwrap();
+    /// assert_eq!(path.file_name().and_then(|s| s.to_str()), Some("rddclient.cache"));
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// `Ok(PathBuf)` containing the chosen cache file path, or `Err` if no suitable path could be determined.
     fn default_cache_path() -> Result<PathBuf, Box<dyn Error>> {
         #[cfg(target_os = "linux")]
         {
@@ -155,17 +250,62 @@ impl StateManager {
         Err("Failed to determine cache file location".into())
     }
     
-    /// Get state for a specific host
+    /// Retrieve the stored HostState for a given hostname.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// let mgr = StateManager::new(None).unwrap();
+    /// let _state = mgr.get("example.com");
+    /// ```
+    ///
+    /// # Returns
+    ///
+    /// `Some(&HostState)` if a state exists for the hostname, `None` otherwise.
     pub fn get(&self, hostname: &str) -> Option<&HostState> {
         self.states.get(hostname)
     }
     
-    /// Get mutable state for a specific host (creates if doesn't exist)
+    /// Get a mutable HostState for the given hostname, inserting a default state if none exists.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::path::PathBuf;
+    /// use std::collections::HashMap;
+    /// // Construct a minimal StateManager for demonstration (fields may be private in actual usage).
+    /// let mut mgr = StateManager { cache_file: PathBuf::from("/tmp/rddclient.cache"), states: HashMap::new() };
+    /// let state = mgr.get_mut("example.com");
+    /// state.status = Some("nochg".to_string());
+    /// ```
     pub fn get_mut(&mut self, hostname: &str) -> &mut HostState {
         self.states.entry(hostname.to_string()).or_default()
     }
     
-    /// Load state from cache file (ddclient format)
+    /// Loads state entries from the cache file using the ddclient-style `key=value` format.
+    ///
+    /// Skips empty lines and lines beginning with `##`. Each non-comment line is expected to contain
+    /// comma-separated `key=value` pairs followed by a hostname; recognized keys are `ip`, `mtime`,
+    /// `status`, `atime`, and `wtime`. Parsed HostState values are inserted into the manager's internal
+    /// map under the corresponding hostname; unknown keys are ignored.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    /// use std::fs;
+    /// use std::path::PathBuf;
+    /// // prepare a temporary cache file
+    /// let mut path = std::env::temp_dir();
+    /// path.push("rddclient_test_cache");
+    /// let content = "ip=1.2.3.4,mtime=1700000000,status=good example.com\n";
+    /// fs::write(&path, content).unwrap();
+    ///
+    /// let mut mgr = StateManager::new(Some(path)).unwrap();
+    /// mgr.load().unwrap();
+    /// let state = mgr.get("example.com").unwrap();
+    /// assert_eq!(state.ip.unwrap(), "1.2.3.4".parse::<IpAddr>().unwrap());
+    /// ```
     pub fn load(&mut self) -> Result<(), Box<dyn Error>> {
         let content = fs::read_to_string(&self.cache_file)?;
         
@@ -232,7 +372,23 @@ impl StateManager {
         Ok(())
     }
     
-    /// Save state to cache file (ddclient format)
+    /// Write the manager's states to the configured cache file in a ddclient-compatible
+    /// key=value per-host format.
+    ///
+    /// This will ensure the cache file's parent directory exists, overwrite the file,
+    /// write a header with a human-readable and epoch timestamp, and then write one
+    /// line per hostname containing comma-separated `key=value` pairs for any present
+    /// fields followed by the hostname. I/O errors are returned to the caller.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use std::path::PathBuf;
+    /// use rddclient::state::StateManager;
+    ///
+    /// let mgr = StateManager::new(Some(PathBuf::from("/tmp/rddclient.cache"))).unwrap();
+    /// mgr.save().unwrap();
+    /// ```
     pub fn save(&self) -> Result<(), Box<dyn Error>> {
         // Create parent directory if it doesn't exist
         if let Some(parent) = self.cache_file.parent() {
@@ -275,8 +431,31 @@ impl StateManager {
         Ok(())
     }
 
-    /// Check if an update should be allowed based on rate limits
-    /// Returns (should_update, reason_if_skipped)
+    /// Determines whether an update for the given hostname should be performed based on
+    /// force flag, IP change status, last-success / last-failure timestamps, and
+    /// configured min/max intervals.
+    ///
+    /// The returned boolean indicates whether an update is allowed. When an update is
+    /// skipped the optional string contains a human-readable reason.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// // example usage (assumes `manager` is a StateManager with loaded state)
+    /// let (allowed, reason) = manager.should_update(
+    ///     "example.com",
+    ///     /* ip_changed */ true,
+    ///     /* force */ false,
+    ///     /* min_interval */ Some(60),
+    ///     /* max_interval */ Some(86400),
+    ///     /* min_error_interval */ Some(300),
+    /// );
+    /// if allowed {
+    ///     // proceed with update
+    /// } else {
+    ///     eprintln!("update skipped: {:?}", reason);
+    /// }
+    /// ```
     pub fn should_update(
         &self,
         hostname: &str,
@@ -348,7 +527,14 @@ impl StateManager {
     }
 }
 
-/// Get current Unix timestamp in seconds
+/// Get the current Unix timestamp in seconds.
+///
+/// # Examples
+///
+/// ```
+/// let ts = current_timestamp();
+/// assert!(ts > 0);
+/// ```
 fn current_timestamp() -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -356,7 +542,25 @@ fn current_timestamp() -> u64 {
         .as_secs()
 }
 
-/// Format timestamp as human-readable string
+/// Produces a simple human-readable UTC-like representation of a Unix timestamp (seconds since epoch).
+
+///
+
+/// The formatting is a basic, debug-style representation suitable for logs or cache headers; it is not intended as a fully localized or formatted datetime string.
+
+///
+
+/// # Examples
+
+///
+
+/// ```
+
+/// let s = format_timestamp(0);
+
+/// assert!(s.contains("1970"));
+
+/// ```
 fn format_timestamp(timestamp: u64) -> String {
     // Simple UTC format - could use chrono for better formatting
     let datetime = UNIX_EPOCH + std::time::Duration::from_secs(timestamp);

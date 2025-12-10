@@ -12,6 +12,25 @@ pub struct DinahostingClient {
 }
 
 impl DinahostingClient {
+    /// Creates a new DinahostingClient from configuration, requiring a username and password and defaulting the server to "https://dinahosting.com" when not provided.
+    ///
+    /// Returns an error if the configuration does not contain a username or password.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Construct a Config with required fields (type shown for clarity; use the project's Config)
+    /// let config = Config {
+    ///     login: Some("user@example.com".to_string()),
+    ///     password: Some("s3cret".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    ///
+    /// let client = DinahostingClient::new(&config).unwrap();
+    /// assert_eq!(client.server, "https://dinahosting.com");
+    /// assert_eq!(client.username, "user@example.com");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let username = config.login.as_ref()
             .ok_or("username is required for Dinahosting")?
@@ -31,6 +50,16 @@ impl DinahostingClient {
         })
     }
 
+    /// Derives the domain from a hostname by removing its first dot-separated label.
+    ///
+    /// Returns the domain portion of `hostname` (e.g., `"ddns.example.com"` -> `"example.com"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DinahostingClient { server: String::new(), username: String::new(), password: String::new() };
+    /// assert_eq!(client.get_domain_from_hostname("ddns.example.com"), "example.com");
+    /// ```
     fn get_domain_from_hostname(&self, hostname: &str) -> String {
         // Extract domain from hostname (e.g., "ddns.example.com" -> "example.com")
         hostname.split('.').skip(1).collect::<Vec<_>>().join(".")
@@ -38,6 +67,35 @@ impl DinahostingClient {
 }
 
 impl DnsClient for DinahostingClient {
+    /// Update the DNS record for `hostname` to the provided `ip` using Dinahosting's DynDNS API.
+    ///
+    /// Sends a GET request to Dinahosting's API to set an A (IPv4) or AAAA (IPv6) record for the given hostname.
+    /// On success (API response indicates success), the function returns `Ok(())`. On failure it returns an `Err` describing:
+    /// - a non-200 HTTP status code,
+    /// - an authentication failure reported by the provider,
+    /// - a provider-specific error message, or
+    /// - an unexpected response body.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `Err` when the HTTP request fails, the status code is not 200, or the API response indicates an error (including authentication failures).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use std::net::IpAddr;
+    /// # use your_crate::clients::dinahosting::DinahostingClient;
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = DinahostingClient {
+    ///     server: "https://dinahosting.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// let ip: IpAddr = "1.2.3.4".parse()?;
+    /// client.update_record("ddns.example.com", ip)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let domain = self.get_domain_from_hostname(hostname);
         let record_type = match ip {
@@ -80,6 +138,22 @@ impl DnsClient for DinahostingClient {
         }
     }
 
+    /// Ensures the client has both a username and a password configured.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the username is empty or if the password is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DinahostingClient {
+    ///     server: "https://dinahosting.com".into(),
+    ///     username: "user".into(),
+    ///     password: "pass".into(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.username.is_empty() {
             return Err("username is required for Dinahosting".into());
@@ -90,6 +164,20 @@ impl DnsClient for DinahostingClient {
         Ok(())
     }
 
+    /// Gets the DNS provider name for this client.
+    ///
+    /// Returns the provider name "Dinahosting".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DinahostingClient {
+    ///     server: String::from("https://dinahosting.com"),
+    ///     username: String::from("user"),
+    ///     password: String::from("pass"),
+    /// };
+    /// assert_eq!(client.provider_name(), "Dinahosting");
+    /// ```
     fn provider_name(&self) -> &str {
         "Dinahosting"
     }

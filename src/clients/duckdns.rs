@@ -11,6 +11,22 @@ pub struct DuckDnsClient {
 }
 
 impl DuckDnsClient {
+    /// Create a DuckDnsClient from a Config.
+    ///
+    /// The client's token is taken from `config.password`; the server is taken from
+    /// `config.server` if present, otherwise defaults to `https://www.duckdns.org`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(DuckDnsClient)` configured with the token and server, `Err` if the token is missing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = Config { password: Some("test-token-12345".to_string()), ..Default::default() };
+    /// let client = DuckDnsClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "DuckDNS");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
             .or(config.password.as_ref())
@@ -26,6 +42,37 @@ impl DuckDnsClient {
 }
 
 impl DnsClient for DuckDnsClient {
+    /// Update the DNS A record for a DuckDNS hostname to the provided IP.
+    ///
+    /// The `hostname` may include the trailing `.duckdns.org` suffix; if present it will be trimmed
+    /// before constructing the update request. The request is sent to the client's configured DuckDNS
+    /// server using the client's token.
+    ///
+    /// # Parameters
+    ///
+    /// - `hostname`: The DuckDNS hostname to update (e.g., `"myhost"` or `"myhost.duckdns.org"`).
+    /// - `ip`: The IP address to assign to the hostname.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if the update succeeded (`"OK"` response from DuckDNS); `Err` with a descriptive
+    /// message if the provider reported failure (`"KO"`) or returned an unexpected response.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    ///
+    /// let client = DuckDnsClient {
+    ///     token: "test-token-12345".to_string(),
+    ///     server: "https://www.duckdns.org".to_string(),
+    /// };
+    ///
+    /// let ip: IpAddr = "203.0.113.1".parse().unwrap();
+    /// let res = client.update_record("myhost.duckdns.org", ip);
+    /// // In real usage this performs a network request; here we only show the call shape.
+    /// let _ = res;
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         // DuckDNS hostname is typically without the .duckdns.org suffix
         let domain = hostname.trim_end_matches(".duckdns.org");
@@ -53,6 +100,16 @@ impl DnsClient for DuckDnsClient {
         }
     }
 
+    /// Validates that the client has a DuckDNS token configured.
+    ///
+    /// Returns `Ok(())` if the token is present, `Err` with message `"token is required for DuckDNS"` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = crate::clients::duckdns::DuckDnsClient { token: "test-token".into(), server: "https://www.duckdns.org".into() };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.token.is_empty() {
             return Err("token is required for DuckDNS".into());
@@ -60,6 +117,16 @@ impl DnsClient for DuckDnsClient {
         Ok(())
     }
 
+    /// Provides the DNS provider name for this client.
+    ///
+    /// The returned string is the static provider identifier: "DuckDNS".
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = DuckDnsClient { token: "t".into(), server: "s".into() };
+    /// assert_eq!(client.provider_name(), "DuckDNS");
+    /// ```
     fn provider_name(&self) -> &str {
         "DuckDNS"
     }
@@ -69,6 +136,21 @@ impl DnsClient for DuckDnsClient {
 mod tests {
     use super::*;
 
+    /// Creates a Config prefilled for DuckDNS unit tests.
+    ///
+    /// The returned config has:
+    /// - protocol set to "duckdns"
+    /// - password set to "test-token-12345"
+    /// - host set to "myhost.duckdns.org"
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = create_test_config();
+    /// assert_eq!(cfg.protocol.as_deref(), Some("duckdns"));
+    /// assert_eq!(cfg.password.as_deref(), Some("test-token-12345"));
+    /// assert_eq!(cfg.host.as_deref(), Some("myhost.duckdns.org"));
+    /// ```
     fn create_test_config() -> Config {
         Config {
             protocol: Some("duckdns".to_string()),
@@ -116,6 +198,15 @@ mod tests {
         assert!(result.unwrap_err().to_string().contains("token"));
     }
 
+    /// Verifies that a `DuckDnsClient` created from a valid configuration passes `validate_config`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let config = create_test_config();
+    /// let client = DuckDnsClient::new(&config).unwrap();
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     #[test]
     fn test_duckdns_validate_config() {
         let config = create_test_config();

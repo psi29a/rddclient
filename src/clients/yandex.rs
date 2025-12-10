@@ -12,6 +12,32 @@ pub struct YandexClient {
 }
 
 impl YandexClient {
+    /// Creates a new YandexClient from the provided configuration.
+    ///
+    /// The function reads the PDD token from `config.password` and the domain (zone) from
+    /// `config.zone`. If `config.server` is not set, the Yandex PDD API server
+    /// "https://pddimp.yandex.ru" is used as the default.
+    ///
+    /// Returns an error if the configuration is missing the required `password` (PDD token)
+    /// or `zone` (domain).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use std::error::Error;
+    /// # use crate::Config;
+    /// # use crate::clients::yandex::YandexClient;
+    /// # fn example() -> Result<(), Box<dyn Error>> {
+    /// let config = Config {
+    ///     password: Some("pdd-token".to_string()),
+    ///     zone: Some("example.com".to_string()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = YandexClient::new(&config)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
             .ok_or("password (PDD token) is required for Yandex")?
@@ -33,6 +59,26 @@ impl YandexClient {
 }
 
 impl DnsClient for YandexClient {
+    /// Update the DNS record for a hostname to the provided IP using the Yandex PDD API.
+    ///
+    /// On success this returns `Ok(())`. On failure this returns an `Err` containing a description
+    /// of the HTTP or API error.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::net::IpAddr;
+    ///
+    /// let client = YandexClient {
+    ///     server: "https://pddimp.yandex.ru".into(),
+    ///     token: "token".into(),
+    ///     domain: "example.com".into(),
+    /// };
+    ///
+    /// // Update host.example.com to 1.2.3.4
+    /// let res = client.update_record("host.example.com", "1.2.3.4".parse::<IpAddr>().unwrap());
+    /// assert!(res.is_ok() || res.is_err()); // network-dependent in real use
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let record_type = match ip {
             IpAddr::V4(_) => "A",
@@ -78,6 +124,22 @@ impl DnsClient for YandexClient {
         }
     }
 
+    /// Validates that the client has the required Yandex configuration values.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if both the PDD token and domain are non-empty, `Err` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = YandexClient {
+    ///     server: "https://pddimp.yandex.ru".to_string(),
+    ///     token: "token".to_string(),
+    ///     domain: "example.com".to_string(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.token.is_empty() {
             return Err("password (PDD token) is required for Yandex".into());
@@ -88,6 +150,16 @@ impl DnsClient for YandexClient {
         Ok(())
     }
 
+    /// Identify the DNS provider implemented by this client.
+    ///
+    /// Returns the provider name `"Yandex"`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = YandexClient { server: String::new(), token: String::new(), domain: String::new() };
+    /// assert_eq!(client.provider_name(), "Yandex");
+    /// ```
     fn provider_name(&self) -> &str {
         "Yandex"
     }

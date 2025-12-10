@@ -12,6 +12,28 @@ pub struct CloudXnsClient {
 }
 
 impl CloudXnsClient {
+    /// Creates a CloudXnsClient from a Config by extracting CloudXNS credentials and server URL.
+    ///
+    /// The `login` field of `config` is used as the API key and must be present. The `password` field
+    /// is used as the secret key and must be present. If `server` is not provided, the default
+    /// "https://www.cloudxns.net" is used.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `login` (API key) or `password` (secret key) is missing in `config`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cfg = Config {
+    ///     login: Some("api_key".into()),
+    ///     password: Some("secret_key".into()),
+    ///     server: None,
+    ///     ..Default::default()
+    /// };
+    /// let client = CloudXnsClient::new(&cfg).unwrap();
+    /// assert_eq!(client.provider_name(), "CloudXNS");
+    /// ```
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let api_key = config.login.as_ref()
             .ok_or("username (API key) is required for CloudXNS")?
@@ -32,6 +54,29 @@ impl CloudXnsClient {
 }
 
 impl DnsClient for CloudXnsClient {
+    /// Update the DNS record for a hostname on CloudXNS to the provided IP address.
+    ///
+    /// Attempts to push an "A" record for IPv4 or "AAAA" record for IPv6 to the CloudXNS DDNS endpoint.
+    /// The result is considered successful when CloudXNS returns a success indicator in the response body.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` if CloudXNS accepted the update; `Err` with a descriptive message otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use std::net::IpAddr;
+    ///
+    /// let client = CloudXnsClient {
+    ///     server: "https://www.cloudxns.net".to_string(),
+    ///     api_key: "APIKEY".to_string(),
+    ///     secret_key: "SECRET".to_string(),
+    /// };
+    ///
+    /// let ip: IpAddr = "203.0.113.42".parse().unwrap();
+    /// client.update_record("host.example.com", ip).expect("update failed");
+    /// ```
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let record_type = match ip {
             IpAddr::V4(_) => "A",
@@ -76,6 +121,21 @@ impl DnsClient for CloudXnsClient {
         }
     }
 
+    /// Ensure the client has both an API key and a secret key configured.
+    ///
+    /// Returns `Ok(())` if `api_key` and `secret_key` are both non-empty; returns an `Err` describing
+    /// which credential is missing otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let client = CloudXnsClient {
+    ///     server: "https://www.cloudxns.net".to_string(),
+    ///     api_key: "my-api-key".to_string(),
+    ///     secret_key: "my-secret".to_string(),
+    /// };
+    /// assert!(client.validate_config().is_ok());
+    /// ```
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
         if self.api_key.is_empty() {
             return Err("username (API key) is required for CloudXNS".into());
@@ -86,6 +146,16 @@ impl DnsClient for CloudXnsClient {
         Ok(())
     }
 
+    /// The DNS provider identifier returned by this client.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Construct a client (replace `config` with a valid Config instance)
+    /// let config = /* Config with valid api_key and secret_key */;
+    /// let client = CloudXnsClient::new(&config).unwrap();
+    /// assert_eq!(client.provider_name(), "CloudXNS");
+    /// ```
     fn provider_name(&self) -> &str {
         "CloudXNS"
     }

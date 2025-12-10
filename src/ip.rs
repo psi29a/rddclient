@@ -16,12 +16,30 @@ pub enum IpDetectionMethod {
 }
 
 impl Default for IpDetectionMethod {
+    /// Default IP detection method: web-based lookup using the built-in services.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let d = IpDetectionMethod::default();
+    /// assert_eq!(d, IpDetectionMethod::Web(None));
+    /// ```
     fn default() -> Self {
         Self::Web(None)
     }
 }
 
-/// Get external IP address from a public service
+/// Obtain the machine's external IP by querying public web services.
+///
+/// Queries multiple well-known public IP services in sequence and returns the first successfully parsed IP address.
+/// On success returns the discovered external `IpAddr`; on failure returns an error describing the last failure.
+///
+/// # Examples
+///
+/// ```
+/// let ip = get_external_ip().expect("failed to get external IP");
+/// println!("{}", ip);
+/// ```
 pub fn get_external_ip() -> Result<IpAddr, Box<dyn Error>> {
     // Try multiple services in case one is down
     // Matches ddclient's built-in web services for compatibility
@@ -50,7 +68,17 @@ pub fn get_external_ip() -> Result<IpAddr, Box<dyn Error>> {
     Err(last_error.unwrap_or_else(|| "Failed to get external IP from any service".into()))
 }
 
-/// Try to get IP from a specific service
+/// Fetches an IP address from a single HTTP service URL.
+///
+/// The provided `url` is expected to return a plain IP address in the response body.
+/// Returns a parsed `IpAddr` on success or an error when the request fails or the body does not contain a valid IP.
+///
+/// # Examples
+///
+/// ```
+/// let ip = try_service("https://api.ipify.org").unwrap();
+/// assert!(matches!(ip, std::net::IpAddr::V4(_) | std::net::IpAddr::V6(_)));
+/// ```
 fn try_service(url: &str) -> Result<IpAddr, Box<dyn Error>> {
     let resp = minreq::get(url)
         .with_timeout(10)
@@ -59,14 +87,47 @@ fn try_service(url: &str) -> Result<IpAddr, Box<dyn Error>> {
     Ok(ip)
 }
 
-/// Parse and validate a provided IP address string
+/// Parses an IP address from the provided string and returns it.
+///
+/// # Returns
+/// `IpAddr` if `ip_str` is a valid IPv4 or IPv6 address, an error with a descriptive message otherwise.
+///
+/// # Examples
+///
+/// ```
+/// let ip = parse_ip("127.0.0.1").unwrap();
+/// assert_eq!(ip.to_string(), "127.0.0.1");
+/// ```
 pub fn parse_ip(ip_str: &str) -> Result<IpAddr, Box<dyn Error>> {
     ip_str.parse().map_err(|e| {
         format!("'{}' is an invalid IP address: {}", ip_str, e).into()
     })
 }
 
-/// Get IP from network interface
+/// Obtain the first non-loopback IP address assigned to a network interface.
+///
+/// This queries platform-specific system utilities to find an IPv4 or IPv6 address for `interface`.
+/// On success returns the first valid, non-loopback address found; on failure returns an error.
+///
+/// # Parameters
+///
+/// - `interface`: name of the network interface (for example `"eth0"` or `"en0"`).
+///
+/// # Returns
+///
+/// `Ok(IpAddr)` with the interface's address, `Err` if no valid address is found or the underlying system commands fail.
+///
+/// # Examples
+///
+/// ```no_run
+/// use std::net::IpAddr;
+/// # // function under test is assumed to be in the same crate
+/// let res: Result<IpAddr, Box<dyn std::error::Error>> = get_ip_from_interface("eth0");
+/// match res {
+///     Ok(ip) => println!("interface ip: {}", ip),
+///     Err(e) => eprintln!("could not determine IP: {}", e),
+/// }
+/// ```
 pub fn get_ip_from_interface(interface: &str) -> Result<IpAddr, Box<dyn Error>> {
     #[cfg(target_os = "linux")]
     {
@@ -124,7 +185,29 @@ pub fn get_ip_from_interface(interface: &str) -> Result<IpAddr, Box<dyn Error>> 
     Err(format!("Failed to get IP from interface '{}'", interface).into())
 }
 
-/// Extract IP address from command output (Linux/macOS)
+/// Extracts the first non-loopback, non-multicast IP address found in
+/// Unix-style command output (e.g., `ip addr` or `ifconfig`).
+///
+/// Scans each line for the tokens `inet` or `inet6`, takes the following
+/// whitespace-separated token (stripping any CIDR suffix like `/24`),
+/// validates it as an `IpAddr`, and returns the first address that is
+/// neither loopback nor multicast. Returns `None` if no suitable address
+/// is found.
+///
+/// # Examples
+///
+/// ```
+/// use std::net::IpAddr;
+/// let output = r#"
+/// 2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+///     inet 192.0.2.42/24 brd 192.0.2.255 scope global eth0
+///     inet6 fe80::1e2f:65ff:fe9b:7c3a/64 scope link
+/// "#;
+/// assert_eq!(
+///     super::extract_ip_from_output(output),
+///     Some("192.0.2.42".parse::<IpAddr>().unwrap())
+/// );
+/// ```
 fn extract_ip_from_output(output: &str) -> Option<IpAddr> {
     use std::str::FromStr;
 
@@ -148,7 +231,30 @@ fn extract_ip_from_output(output: &str) -> Option<IpAddr> {
     None
 }
 
-/// Extract IP address from Windows ipconfig output
+/// Extracts the first non-loopback IPv4 or IPv6 address assigned to a named interface from Windows `ipconfig` output.
+///
+/// The function scans `ipconfig` output for the section matching `interface_name` and returns the first valid IP address
+/// found under "IPv4 Address" or "IPv6 Address". Returns `None` if no suitable address is located.
+///
+/// # Examples
+///
+/// ```
+/// use std::net::IpAddr;
+///
+/// let sample = r#"
+/// Ethernet adapter Ethernet:
+///
+///    Connection-specific DNS Suffix  . : example.local
+///    IPv4 Address. . . . . . . . . . . : 192.0.2.10
+///    Subnet Mask . . . . . . . . . . . : 255.255.255.0
+///    Default Gateway . . . . . . . . . : 192.0.2.1
+/// "#;
+///
+/// // The real function is compiled only on Windows; this demonstrates expected behavior.
+/// if let Some(ip) = extract_ip_from_windows_output(sample, "Ethernet") {
+///     assert_eq!(ip, IpAddr::from([192, 0, 2, 10]));
+/// }
+/// ```
 #[cfg(target_os = "windows")]
 fn extract_ip_from_windows_output(output: &str, interface_name: &str) -> Option<IpAddr> {
     use std::str::FromStr;
@@ -188,7 +294,18 @@ fn extract_ip_from_windows_output(output: &str, interface_name: &str) -> Option<
     None
 }
 
-/// Get IP by executing a command
+/// Obtain an IP address by running an external command and parsing its stdout.
+///
+/// The `cmd` string is split on ASCII whitespace; the first token is treated as the program
+/// and the remaining tokens as its arguments. The command must exit successfully and its
+/// trimmed stdout must contain a valid IPv4 or IPv6 address.
+///
+/// # Examples
+///
+/// ```
+/// let ip = get_ip_from_command("echo 1.2.3.4").unwrap();
+/// assert_eq!(ip.to_string(), "1.2.3.4");
+/// ```
 pub fn get_ip_from_command(cmd: &str) -> Result<IpAddr, Box<dyn Error>> {
     // Parse command into program and args
     let parts: Vec<&str> = cmd.split_whitespace().collect();
@@ -215,7 +332,18 @@ pub fn get_ip_from_command(cmd: &str) -> Result<IpAddr, Box<dyn Error>> {
     parse_ip(trimmed)
 }
 
-/// Get IP address using specified detection method
+/// Selects an IP detection strategy and returns the resolved IP address.
+///
+/// Returns the resolved `IpAddr` when detection succeeds, or an error describing the failure.
+///
+/// # Examples
+///
+/// ```
+/// use std::net::IpAddr;
+/// let method = crate::IpDetectionMethod::Manual("1.2.3.4".to_string());
+/// let ip = crate::get_ip_with_method(&method).unwrap();
+/// assert_eq!(ip, "1.2.3.4".parse::<IpAddr>().unwrap());
+/// ```
 pub fn get_ip_with_method(method: &IpDetectionMethod) -> Result<IpAddr, Box<dyn Error>> {
     match method {
         IpDetectionMethod::Manual(ip_str) => parse_ip(ip_str),

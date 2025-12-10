@@ -22,7 +22,7 @@
 INTERFACE=$1
 ACTION=$2
 
-# Log function
+# log sends its arguments to the system logger (syslog) using the tag `rddclient-dispatcher`.
 log() {
     logger -t rddclient-dispatcher "$@"
 }
