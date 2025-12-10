@@ -1,18 +1,879 @@
+# rddclient - Rust Dynamic DNS Client
 
-# CloudFlareDDNS
+A fast, lightweight Dynamic DNS updater written in Rust that supports multiple DNS providers.
 
-A CloudFlare DNS record updater written in Rust
+## Supported Providers
 
-Small, fast and meant to be run periodically.
+- ✅ **[1984.is](https://www.1984.is)** - DynDNS2-compatible protocol
+- ✅ **[Afraid.org](https://freedns.afraid.org)** - Token-based update API (v2)
+- ✅ **[Cloudflare](https://www.cloudflare.com)** - Full API support with zone management
+- ✅ **[ChangeIP](https://www.changeip.com)** - Legacy JSON protocol with basic auth
+- ✅ **[ClouDNS](https://www.cloudns.net)** - Simple dynurl-based updates
+- ✅ **[CloudXNS](https://www.cloudxns.net)** - REST API with API key/secret
+- ✅ **[DDNS.FM](https://ddns.fm)** - DDNS service with REST API
+- ✅ **[DDNSS](https://www.ddnss.de)** - Simple token-based GET protocol
+- ✅ **[deSEC](https://desec.io)** - German DNS with token auth (DynDNS2-compatible)
+- ✅ **[DigitalOcean](https://www.digitalocean.com/)** - REST API with token authentication
+- ✅ **[Dinahosting](https://dinahosting.com)** - REST API with basic auth
+- ✅ **[Directnic](https://www.directnic.com)** - Pre-configured URL updates
+- ✅ **[DNS Made Easy](https://dnsmadeeasy.com)** - Dynamic DNS endpoint
+- ✅ **[DNSExit2](https://www.dnsexit.com)** - JSON API v2 with API key
+- ✅ **[DNSPod](https://www.dnspod.cn)** - Chinese DNS with token-based API
+- ✅ **[Domeneshop](https://api.domeneshop.no/docs/#tag/ddns/paths/~1dyndns~1update/get)** - REST API with basic auth
+- ✅ **[DonDominio](https://www.dondominio.com)** - JSON API with key auth
+- ✅ **[DSLReports](https://www.dslreports.com)** - DSLReports legacy protocol
+- ✅ **[DuckDNS](https://duckdns.org)** - Simple token-based updates
+- ✅ **DynDNS v1** - Legacy DynDNS protocol (pre-DynDNS2)
+- ✅ **DynDNS2** - Compatible with [DynDNS](https://account.dyn.com), DNSdynamic, and other DynDNS2-compatible services
+- ✅ **[Dynu](https://www.dynu.com)** - DynDNS2-compatible protocol
+- ✅ **[EasyDNS](https://www.easydns.com)** - REST API with basic auth (10min update interval)
+- ✅ **Email Only** - Send notifications via email instead of updating DNS (requires system sendmail)
+- ✅ **[Enom](https://www.enom.com)** - Dynamic DNS API
+- ✅ **[Freedns](https://freedns.afraid.org)** (afraid.org) - Hash-based update protocol
+- ✅ **[Freemyip](https://freemyip.com)** - Simple token-based updates
+- ✅ **[Gandi](https://gandi.net)** - REST API with API key
+- ✅ **[GoDaddy](https://www.godaddy.com)** - REST API with key/secret
+- ✅ **[Google Domains](https://domains.google.com)** - DynDNS2-compatible protocol
+- ✅ **[Hetzner](https://www.hetzner.com)** - REST API with API token
+- ✅ **[Hurricane Electric](https://dns.he.net)** (HE.net) - Simple update protocol
+- ✅ **[Infomaniak](https://www.infomaniak.com)** - DynDNS2-compatible protocol
+- ✅ **[INWX](https://www.inwx.com/)** - DynDNS2-compatible protocol
+- ✅ **[Key-Systems](https://www.key-systems.net)** (RRPproxy) - Token-based updates
+- ✅ **[Linode](https://www.linode.com)** - Linode API v4 with token auth
+- ✅ **[Loopia](https://www.loopia.com)** - DynDNS2-compatible protocol
+- ✅ **[LuaDNS](https://luadns.com)** - REST API with email/token auth
+- ✅ **[Mythic Beasts](https://www.mythic-beasts.com)** - Modern dual-endpoint API
+- ✅ **[Namecheap](https://www.namecheap.com)** - Native Dynamic DNS support
+- ✅ **[NFSN](https://www.nearlyfreespeech.net)** (NearlyFreeSpeech.NET) - Basic auth updates
+- ✅ **[Njalla](https://njal.la/docs/ddns)** - Simple API with password auth
+- ✅ **[No-IP](https://www.noip.com)** - DynDNS2-compatible with No-IP specifics
+- ✅ **nsupdate** - RFC 2136 Dynamic DNS Update protocol (requires DNS library)
+- ✅ **[OVH](https://www.ovhcloud.com)** - REST API (simplified, requires proper signing for production)
+- ✅ **[Porkbun](https://porkbun.com)** - REST API with key/secret
+- ✅ **[Regfish](https://www.regfish.de)** - DynDNS2-compatible protocol
+- ✅ **[Selfhost.de](https://www.selfhost.de)** - German provider with DynDNS2 protocol
+- ✅ **[Sitelutions](https://www.sitelutions.com)** - DynDNS2-compatible protocol
+- ✅ **[Woima.fi](https://www.woima.fi)** - Finnish DNS with DynDNS2 protocol
+- ✅ **[Yandex](https://yandex.com)** - Yandex PDD API
+- ✅ **[Zoneedit](https://www.zoneedit.com)** - DynDNS2-compatible protocol
+- ✅ **ZoneEdit v1** - ZoneEdit legacy protocol
 
-## Usage
+### DynDNS2-Compatible Providers
+
+The `dyndns2` provider also works with many other services that support the DynDNS2 protocol, including but not limited to: DNSdynamic, DuckDNS (alternative), many router DDNS services, and custom DDNS implementations.
+
+## Features
+
+- 🚀 **Blazingly fast** - Compiled Rust vs interpreted Perl 
+- 📦 **Tiny binary** - ~1.2MB vs ddclient's 200KB+ Perl script + dependencies
+- 🎯 **Drop-in replacement** - Compatible with ddclient workflows and patterns
+- 📝 **Flexible configuration** - File or command-line arguments
+- 🌐 **Smart IP detection** - Automatic IP detection with multiple fallback sources
+- ⚙️ **Easily extensible** - Clean architecture for adding new providers
+
+## Installation
+
+### From Source
 
 ```bash
-cloudflaredns
+cargo build --release
+sudo cp target/release/rddclient /usr/local/bin/
 ```
 
-## Output
+The binary will be available at `target/release/rddclient`.
 
-    [2024-09-11T20:24:49Z INFO  cloudflaredns] Starting Cloudflare DNS updater...
-    [2024-09-11T20:24:50Z INFO  cloudflaredns] DNS Record ID for ddns.example.net is 995a899deaf65240ac0a04dd7710a6ac
-    [2024-09-11T20:24:50Z INFO  cloudflaredns] DNS Record for ddns.example.net successfully updated to IP: 74.6.143.25
+### System Integration
+
+```bash
+# Create config directory
+sudo mkdir -p /etc/rddclient
+
+# Copy example config
+cp config.ini.example /etc/rddclient/rddclient.conf
+
+# Set up systemd timer (recommended) or cron job
+```
+
+## Quick Start
+
+### Command Line Examples
+
+```bash
+# Cloudflare
+rddclient --provider cloudflare \
+  --zone-id YOUR_ZONE_ID \
+  --api-token YOUR_API_TOKEN \
+  --dns-record ddns.example.com
+
+# DuckDNS
+rddclient --provider duckdns \
+  --password YOUR_TOKEN \
+  --dns-record myhost
+
+# GoDaddy
+rddclient --provider godaddy \
+  --username YOUR_API_KEY \
+  --password YOUR_API_SECRET \
+  --dns-record ddns.example.com
+
+# No-IP
+rddclient --provider noip \
+  --username YOUR_USERNAME \
+  --password YOUR_PASSWORD \
+  --dns-record ddns.example.com
+
+# Hurricane Electric
+rddclient --provider he \
+  --password YOUR_KEY \
+  --dns-record ddns.example.com
+
+# Use config file instead
+rddclient --config /etc/rddclient/rddclient.conf
+```
+
+## Configuration Files
+
+Create a `rddclient.conf` file for your provider (compatible with ddclient config format):
+
+### Cloudflare
+
+```ini
+provider = "cloudflare"
+zone_id = "your_zone_id_here"
+api_token = "your_api_token_here"
+dns_record = "ddns.example.com"
+ttl = 300
+```
+
+### DigitalOcean
+
+```ini
+provider = "digitalocean"
+api_token = "your_api_token_here"
+dns_record = "ddns.example.com"
+```
+
+### DuckDNS
+
+```ini
+provider = "duckdns"
+password = "your_token_here"
+dns_record = "myhost"  # without .duckdns.org
+```
+
+### DynDNS2 / No-IP / Generic
+
+```ini
+provider = "dyndns2"  # or "noip"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dynupdate.no-ip.com"
+```
+
+### Enom
+
+```ini
+provider = "enom"
+password = "your_update_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dynamic.name-services.com"
+```
+
+### Freedns (afraid.org)
+
+```ini
+provider = "freedns"
+password = "your_update_token"  # unique per host
+dns_record = "ddns.example.com"
+```
+
+### Freemyip
+
+```ini
+provider = "freemyip"
+password = "your_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://freemyip.com"
+```
+
+### Gandi
+
+```ini
+provider = "gandi"
+api_token = "your_api_key_here"
+dns_record = "ddns.example.com"
+```
+
+### GoDaddy
+
+```ini
+provider = "godaddy"
+username = "your_api_key"
+password = "your_api_secret"
+dns_record = "ddns.example.com"
+```
+
+### Google Domains
+
+```ini
+provider = "googledomains"  # also: google-domains
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://domains.google.com"
+```
+
+### Hurricane Electric (HE.net)
+
+```ini
+provider = "he"
+password = "your_update_key"
+dns_record = "ddns.example.com"
+```
+
+### Namecheap
+
+```ini
+provider = "namecheap"
+username = "example.com"  # your domain
+password = "your_ddns_password"
+dns_record = "ddns.example.com"
+```
+
+### Porkbun
+
+```ini
+provider = "porkbun"
+username = "your_api_key"
+password = "your_secret_key"
+dns_record = "ddns.example.com"
+```
+
+### Zoneedit
+
+```ini
+provider = "zoneedit"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+```
+
+### 1984.is
+
+```ini
+provider = "1984"  # also: one984
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.1984.is"
+```
+
+### ChangeIP
+
+```ini
+provider = "changeip"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "nic.changeip.com"
+```
+
+### ClouDNS
+
+```ini
+provider = "cloudns"
+password = "https://ipv4.cloudns.net/api/dynamicURL/?q=YOUR_UNIQUE_URL"
+dns_record = "ddns.example.com"  # hostname embedded in URL
+```
+
+### DDNSS
+
+```ini
+provider = "ddnss"
+password = "your_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.ddnss.de"
+```
+
+### DNS Made Easy
+
+```ini
+provider = "dnsmadeeasy"  # also: dns-made-easy
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://cp.dnsmadeeasy.com"
+```
+
+### DigitalOcean
+
+```ini
+provider = "digitalocean"ing"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dinahosting.com"
+```
+
+### Directnic
+
+```ini
+provider = "directnic"
+# Pre-configured URLs from Directnic dashboard:
+server = "https://www.directnic.com/dns/dynUpdateDDNS?host=...&token=..."  # IPv4 URL
+password = "https://www.directnic.com/dns/dynUpdateDDNS?host=...&token=..."  # IPv6 URL
+dns_record = "ddns.example.com"
+```
+
+### DNSExit2
+
+```ini
+provider = "dnsexit2"
+password = "your_api_key"
+dns_record = "ddns.example.com"
+# Optional zone (defaults to dns_record):
+# zone_id = "example.com"
+# Optional TTL (defaults to 5):
+# ttl = 5
+```
+
+### Domeneshop
+
+```ini
+provider = "domeneshop"
+username = "your_api_token"
+password = "your_api_secret"
+dns_record = "ddns.example.com"
+```
+
+### DonDominio
+
+```ini
+provider = "dondominio"
+username = "your_username"
+password = "your_api_key"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dondns.dondominio.com"
+```
+
+### Dynu
+
+```ini
+provider = "dynu"
+username = "your_username"
+password = "your_password"  # or API key
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://api.dynu.com"
+```
+
+### EasyDNS
+
+```ini
+provider = "easydns"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Note: EasyDNS requires 10 minutes between updates
+```
+
+### Email Only
+
+```ini
+provider = "emailonly"
+email = "admin@example.com"
+dns_record = "ddns.example.com"
+# Note: This sends email notifications instead of updating DNS
+# Requires system sendmail to be installed and configured
+```
+
+### Hetzner
+
+```ini
+provider = "hetzner"
+password = "your_api_token"
+zone_id = "example.com"
+dns_record = "ddns.example.com"
+```
+
+### Infomaniak
+
+```ini
+provider = "infomaniak"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://infomaniak.com"
+```
+
+### INWX
+
+```ini
+provider = "inwx"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+```
+
+### Loopia
+
+```ini
+provider = "loopia"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dns.loopia.se"
+```
+
+### Mythic Beasts
+
+```ini
+provider = "mythicbeasts"  # also: mythic-beasts, mythicdyn
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom API server:
+# server = "api.mythic-beasts.com"
+```
+
+### Njalla
+
+```ini
+provider = "njalla"
+password = "your_api_key"
+dns_record = "ddns.example.com"
+```
+
+### Regfish
+
+```ini
+provider = "regfish"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dyndns.regfish.de"
+```
+
+### Sitelutions
+
+```ini
+provider = "sitelutions"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.sitelutions.com"
+```
+
+### Yandex
+
+```ini
+provider = "yandex"
+password = "your_pdd_token"
+zone_id = "example.com"  # your domain
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://pddimp.yandex.ru"
+```
+
+### nsupdate (RFC 2136)
+
+```ini
+provider = "nsupdate"
+server = "ns.example.com"
+username = "zone_name"  # or TSIG key name
+password = "tsig_key"
+dns_record = "ddns.example.com"
+```
+
+**Note:** Full nsupdate support requires a DNS protocol library. Consider using a dedicated nsupdate tool or DNS library for production use.
+
+### CloudXNS
+
+```ini
+provider = "cloudxns"
+username = "your_api_key"
+password = "your_secret_key"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.cloudxns.net"
+```
+
+### DNSPod
+
+```ini
+provider = "dnspod"
+api_token = "your_token_id,your_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dnsapi.cn"
+```
+
+### Linode
+
+```ini
+provider = "linode"
+api_token = "your_api_token"
+zone_id = "your_domain_id"
+dns_record = "your_record_id"
+# Optional custom server:
+# server = "https://api.linode.com"
+```
+
+### deSEC
+
+```ini
+provider = "desec"
+api_token = "your_token"
+zone_id = "example.com"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://update.dedyn.io"
+```
+
+### LuaDNS
+
+```ini
+provider = "luadns"
+username = "your_email"
+api_token = "your_api_token"
+zone_id = "your_zone_id"
+dns_record = "your_record_id"
+# Optional custom server:
+# server = "https://api.luadns.com"
+```
+
+### NFSN (NearlyFreeSpeech.NET)
+
+```ini
+provider = "nfsn"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dynamicdns.park-your-domain.com"
+```
+
+### Afraid.org (v2)
+
+```ini
+provider = "afraid"
+api_token = "your_update_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://freedns.afraid.org"
+```
+
+### Woima.fi
+
+```ini
+provider = "woima"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.woima.fi"
+```
+
+### Selfhost.de
+
+```ini
+provider = "selfhost"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://carol.selfhost.de"
+```
+
+### DDNS.FM
+
+```ini
+provider = "ddnsfm"  # also: ddns.fm
+password = "your_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://api.ddns.fm"
+```
+
+### DSLReports
+
+```ini
+provider = "dslreports"  # also: dslreports1
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://www.dslreports.com"
+```
+
+### DynDNS v1 (Legacy)
+
+```ini
+provider = "dyndns1"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://members.dyndns.org"
+```
+
+### Key-Systems (RRPproxy)
+
+```ini
+provider = "keysystems"  # also: key-systems
+password = "your_token"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dynamicdns.key-systems.net"
+```
+
+### ZoneEdit v1 (Legacy)
+
+```ini
+provider = "zoneedit1"
+username = "your_username"
+password = "your_password"
+dns_record = "ddns.example.com"
+# Optional custom server:
+# server = "https://dynamic.zoneedit.com"
+```
+
+Then run:
+
+```bash
+cloudflareddns --config cloudflareddns.ini
+```
+
+## Configuration Options
+
+| Option | Description | Providers |
+|--------|-------------|-----------|
+| `--provider` | DNS provider name | All |
+| `--zone-id` | Cloudflare Zone ID | Cloudflare |
+| `--api-token` | API token | Cloudflare, DigitalOcean, Gandi, OVH |
+| `--username` | Username or API key | DynDNS2, GoDaddy, Namecheap, No-IP, OVH, Porkbun, Zoneedit |
+| `--password` | Password or secret | Most providers |
+| `--server` | Custom API endpoint | DynDNS2, No-IP, others |
+| `--dns-record` | DNS record(s) to update (comma-separated) | All |
+| `--ttl` | TTL for DNS records | Cloudflare |
+| `--ip` | Manually specify IP address | All |
+| `--config` | Configuration file path | All |
+| `--test` | Test mode (validate without updating) | All |
+| `--verbose` | Verbose output | All |
+| `--debug` | Debug output | All |
+
+## Multiple DNS Records
+
+Update multiple records at once:
+
+```bash
+cloudflareddns --provider cloudflare \
+  --zone-id YOUR_ZONE_ID \
+  --api-token YOUR_API_TOKEN \
+  --dns-record "ddns.example.com,www.example.com,home.example.com"
+```
+
+## Automatic Updates
+
+### Linux/macOS Cron
+
+```bash
+# Update every 5 minutes
+*/5 * * * * /path/to/cloudflareddns --config /path/to/cloudflareddns.ini
+```
+
+### Systemd Service
+
+Create `/etc/systemd/system/ddns-updater.service`:
+
+```ini
+[Unit]
+Description=Dynamic DNS Updater
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cloudflareddns --config /etc/cloudflareddns.ini
+User=nobody
+```
+
+Create `/etc/systemd/system/ddns-updater.timer`:
+
+```ini
+[Unit]
+Description=Run Dynamic DNS Updater every 5 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+```
+
+Enable:
+
+```bash
+sudo systemctl enable ddns-updater.timer
+sudo systemctl start ddns-updater.timer
+```
+
+## Provider-Specific Notes
+
+### Cloudflare
+- Requires Zone ID (found in domain Overview)
+- API token needs `DNS:Edit` permissions
+
+### DigitalOcean
+- Personal Access Token required
+- DNS record must already exist
+
+### DuckDNS
+- Free service, no account needed for basic use
+- Token is per-account, works for all your domains
+- Hostname should be without `.duckdns.org` suffix
+
+### Freedns (afraid.org)
+- Uses unique update token per hostname
+- Token is different for each DNS record
+
+### GoDaddy
+- Requires API key/secret from developer.godaddy.com
+- Production keys require domain ownership verification
+
+### Hurricane Electric
+- Free DNS hosting
+- Update key is per-hostname (found in DNS management)
+
+### OVH
+- Current implementation is simplified
+- Full production use requires proper API request signing
+- Requires application key, secret, and consumer key
+
+### Porkbun
+- Requires API enabled in account settings
+- Both API key and secret key needed
+
+## Architecture
+
+```
+src/
+├── main.rs              # Main application logic
+├── args.rs              # CLI argument parsing
+├── config.rs            # Configuration management
+├── ip.rs                # IP address detection with fallback
+└── clients/             # DNS provider implementations
+    ├── mod.rs           # DnsClient trait and factory
+    ├── cloudflare.rs
+    ├── digitalocean.rs
+    ├── duckdns.rs
+    ├── dyndns2.rs
+    ├── freedns.rs
+    ├── gandi.rs
+    ├── godaddy.rs
+    ├── he.rs
+    ├── namecheap.rs
+    ├── noip.rs
+    ├── ovh.rs
+    ├── porkbun.rs
+    └── zoneedit.rs
+```
+
+## Adding New Providers
+
+To add a new DNS provider:
+
+1. Create `src/clients/newprovider.rs`
+2. Implement the `DnsClient` trait:
+   - `update_record()` - Update DNS record
+   - `validate_config()` - Validate configuration
+   - `provider_name()` - Return provider name
+3. Add module to `src/clients/mod.rs`
+4. Add to `create_client()` factory function
+5. Add configuration example
+
+Example template:
+
+```rust
+use crate::clients::DnsClient;
+use crate::config::Config;
+use std::error::Error;
+use std::net::IpAddr;
+
+pub struct NewProviderClient {
+    // provider-specific fields
+}
+
+impl NewProviderClient {
+    pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
+        // initialization
+    }
+}
+
+impl DnsClient for NewProviderClient {
+    fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
+        // implementation
+    }
+
+    fn validate_config(&self) -> Result<(), Box<dyn Error>> {
+        // validation
+    }
+
+    fn provider_name(&self) -> &str {
+        "NewProvider"
+    }
+}
+```
+
+## Building for Release
+
+```bash
+cargo build --release
+strip target/release/cloudflareddns  # Optional: reduce size further
+```
+
+## Troubleshooting
+
+### IP Detection Issues
+The application tries multiple IP detection services with automatic fallback. If all fail, specify the IP manually with `--ip`.
+
+### Authentication Errors
+- Double-check credentials in your configuration
+- Ensure API tokens have correct permissions
+- Check for trailing spaces in config file values
+
+### DNS Update Failures
+- Verify the DNS record exists (some providers require pre-creation)
+- Check domain ownership in provider dashboard
+- Enable `--verbose` or `--debug` for detailed logs
+
+## License
+
+GPLv3
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Roadmap
+
+- [ ] IPv6 support
+- [ ] Additional providers (INWX, Hetzner, Njalla, etc.)
+- [ ] Daemon mode with automatic interval updates
+- [ ] Configuration validation command
+- [ ] Web UI for configuration management
