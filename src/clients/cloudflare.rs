@@ -24,8 +24,7 @@ impl CloudflareClient {
         let zone = config.zone.as_ref()
             .ok_or("zone is required for Cloudflare (e.g., example.com)")?
             .clone();
-        let server = config.server.as_ref()
-            .map(|s| s.clone())
+        let server = config.server.clone()
             .unwrap_or_else(|| "api.cloudflare.com/client/v4".to_string());
         let ttl = config.ttl.unwrap_or(1);
 

@@ -2,7 +2,7 @@
 name = "rddclient"
 version = "0.5.0"
 authors = ["Bret Curtis <psi29a@gmail.com>"]
-description = "Fast, lightweight Rust replacement for ddclient - Multi-provider Dynamic DNS updater with 53 provider support"
+description = "Fast, lightweight multi-provider Dynamic DNS updater supporting Cloudflare, DynDNS2, Namecheap, and more"
 license = "GPLv3"
 readme = "README.md"
 repository = "https://github.com/psi29a/rddclient"
@@ -19,7 +19,6 @@ panic = "abort"
 [dependencies]
 serde = { version = "1.0.219", default-features = false, features = ["derive"] }
 serde_json = "1.0"
-config = { version = "0.15.19", default-features = false, features= ["ini"] }
 env_logger = { version="0.11.6", default-features = false, features = ["humantime", "auto-color"] }
 log = "0.4.29"
 clap = { version = "4.5.53", default-features = false, features = ["std", "help", "derive"] }

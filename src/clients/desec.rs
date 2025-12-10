@@ -54,7 +54,7 @@ impl DnsClient for DesecClient {
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("Authorization", &encoded_auth)
             .with_param("hostname", if subdomain.is_empty() { &self.domain } else { hostname })
-            .with_param("myip", &ip.to_string())
+            .with_param("myip", ip.to_string())
             .send()?;
 
         let status_code = response.status_code;

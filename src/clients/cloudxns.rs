@@ -47,12 +47,12 @@ impl DnsClient for CloudXnsClient {
         let response = minreq::get(&url)
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("API-KEY", &self.api_key)
-            .with_header("API-REQUEST-DATE", &format!("{}", std::time::SystemTime::now()
+            .with_header("API-REQUEST-DATE", format!("{}", std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs()))
             .with_param("domain", hostname)
-            .with_param("ip", &ip.to_string())
+            .with_param("ip", ip.to_string())
             .with_param("type", record_type)
             .send()?;
 

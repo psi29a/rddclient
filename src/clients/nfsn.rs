@@ -46,7 +46,7 @@ impl DnsClient for NfsnClient {
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("Authorization", &encoded_auth)
             .with_param("host", hostname)
-            .with_param("ip", &ip.to_string())
+            .with_param("ip", ip.to_string())
             .send()?;
 
         let status_code = response.status_code;

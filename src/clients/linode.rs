@@ -59,7 +59,7 @@ impl DnsClient for LinodeClient {
 
         let response = minreq::put(&url)
             .with_header("User-Agent", crate::USER_AGENT)
-            .with_header("Authorization", &format!("Bearer {}", self.token))
+            .with_header("Authorization", format!("Bearer {}", self.token))
             .with_header("Content-Type", "application/json")
             .with_body(body)
             .send()?;

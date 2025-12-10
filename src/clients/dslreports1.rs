@@ -44,7 +44,7 @@ impl DnsClient for Dslreports1Client {
             .with_param("username", &self.username)
             .with_param("password", &self.password)
             .with_param("hostname", hostname)
-            .with_param("ip", &ip.to_string())
+            .with_param("ip", ip.to_string())
             .send()?;
 
         let status_code = response.status_code;

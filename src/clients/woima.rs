@@ -46,7 +46,7 @@ impl DnsClient for WoimaClient {
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("Authorization", &encoded_auth)
             .with_param("hostname", hostname)
-            .with_param("myip", &ip.to_string())
+            .with_param("myip", ip.to_string())
             .send()?;
 
         let status_code = response.status_code;

@@ -52,7 +52,7 @@ impl DnsClient for Dyndns1Client {
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("Authorization", &encoded_auth)
             .with_param("hostname", hostname)
-            .with_param("myip", &ip.to_string());
+            .with_param("myip", ip.to_string());
 
         // Add system parameter for static IPs (DynDNS v1 specific)
         if self.static_ip {
