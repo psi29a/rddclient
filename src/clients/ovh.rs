@@ -22,7 +22,7 @@ impl OvhClient {
         let application_secret = config.password.as_ref()
             .ok_or("password (application secret) is required for OVH")?
             .clone();
-        let consumer_key = config.api_token.as_ref()
+        let consumer_key = config.password.as_ref()
             .ok_or("api_token (consumer key) is required for OVH")?
             .clone();
         

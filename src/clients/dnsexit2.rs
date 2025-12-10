@@ -21,7 +21,7 @@ impl Dnsexit2Client {
         let ttl = config.ttl.unwrap_or(5);
         
         // Zone from zone_id, will be set from hostname if not specified
-        let zone = config.zone_id.clone().unwrap_or_default();
+        let zone = config.zone.clone().unwrap_or_default();
 
         Ok(Dnsexit2Client {
             api_key: api_key.to_string(),

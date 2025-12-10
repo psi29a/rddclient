@@ -12,7 +12,7 @@ pub struct AfraidClient {
 
 impl AfraidClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let token = config.api_token.as_ref()
+        let token = config.password.as_ref()
             .ok_or("api_token (update token) is required for Afraid.org")?
             .clone();
         

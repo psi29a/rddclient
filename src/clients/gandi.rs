@@ -12,7 +12,7 @@ pub struct GandiClient {
 
 impl GandiClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let api_key = config.api_token.as_ref()
+        let api_key = config.password.as_ref()
             .or(config.password.as_ref())
             .ok_or("api_token or password is required for Gandi")?
             .clone();

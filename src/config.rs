@@ -7,16 +7,13 @@ pub struct Config {
     // Protocol/provider selection (ddclient: protocol)
     pub protocol: Option<String>,
 
-    // Cloudflare-specific
-    pub zone_id: Option<String>,
-    pub api_token: Option<String>,
-
-    // Basic auth (ddclient: login/password)
+    // Authentication (ddclient: login/password)
     pub login: Option<String>,
     pub password: Option<String>,
 
     // Common settings
     pub server: Option<String>,
+    pub zone: Option<String>,
     pub host: Option<String>,
     pub ttl: Option<u32>,
 
@@ -44,11 +41,10 @@ impl Config {
 
         Config {
             protocol: Some(args.protocol.clone()),
-            zone_id: args.zone_id.clone().or(base.zone_id),
-            api_token: args.api_token.clone().or(base.api_token),
             login: args.login.clone().or(base.login),
             password: args.password.clone().or(base.password),
             server: args.server.clone().or(base.server),
+            zone: args.zone.clone().or(base.zone),
             host: args.host.clone().or(base.host),
             ttl: args.ttl.or(base.ttl),
             email: base.email,
@@ -98,9 +94,10 @@ mod tests {
     fn test_from_file() {
         let config_content = r#"
         protocol = "cloudflare"
-        zone_id = "example-zone-id"
-        api_token = "example-api-token"
-        host = "example.com"
+        zone = "example.com"
+        login = "token"
+        password = "example-api-token"
+        host = "www.example.com"
         ttl = 3600
         "#;
 
@@ -112,9 +109,10 @@ mod tests {
         let config = Config::from_file(config_path).expect("Failed to read config file");
 
         assert_eq!(config.protocol.unwrap(), "cloudflare");
-        assert_eq!(config.zone_id.unwrap(), "example-zone-id");
-        assert_eq!(config.api_token.unwrap(), "example-api-token");
-        assert_eq!(config.host.unwrap(), "example.com");
+        assert_eq!(config.zone.unwrap(), "example.com");
+        assert_eq!(config.login.unwrap(), "token");
+        assert_eq!(config.password.unwrap(), "example-api-token");
+        assert_eq!(config.host.unwrap(), "www.example.com");
         assert_eq!(config.ttl.unwrap(), 3600);
 
         std::fs::remove_file(config_path).expect("Unable to delete test config file");

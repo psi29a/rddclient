@@ -13,11 +13,11 @@ pub struct DesecClient {
 
 impl DesecClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let token = config.api_token.as_ref()
+        let token = config.password.as_ref()
             .ok_or("api_token is required for deSEC")?
             .clone();
         
-        let domain = config.zone_id.as_ref()
+        let domain = config.zone.as_ref()
             .ok_or("zone_id (domain) is required for deSEC")?
             .clone();
         

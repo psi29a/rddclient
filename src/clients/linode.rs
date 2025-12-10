@@ -14,11 +14,11 @@ pub struct LinodeClient {
 
 impl LinodeClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let token = config.api_token.as_ref()
+        let token = config.password.as_ref()
             .ok_or("api_token is required for Linode")?
             .clone();
         
-        let domain_id = config.zone_id.as_ref()
+        let domain_id = config.zone.as_ref()
             .ok_or("zone_id (domain ID) is required for Linode")?
             .clone();
         

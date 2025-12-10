@@ -7,14 +7,6 @@ pub struct Args {
     #[arg(long, default_value = "dyndns2")]
     pub protocol: String,
 
-    /// Zone ID (Cloudflare only)
-    #[arg(long)]
-    pub zone_id: Option<String>,
-
-    /// API token or password
-    #[arg(long)]
-    pub api_token: Option<String>,
-
     /// Login/username for authentication - ddclient compatible
     #[arg(long)]
     pub login: Option<String>,
@@ -23,9 +15,13 @@ pub struct Args {
     #[arg(long)]
     pub password: Option<String>,
 
-    /// Server/API endpoint (provider-specific)
+    /// Server URL for the DNS provider - ddclient compatible
     #[arg(long)]
     pub server: Option<String>,
+
+    /// DNS zone name (e.g., example.com) - ddclient compatible
+    #[arg(long)]
+    pub zone: Option<String>,
 
     /// Hostname(s) to update (comma-separated) - ddclient compatible
     #[arg(long)]

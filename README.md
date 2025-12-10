@@ -99,36 +99,44 @@ cp config.ini.example /etc/rddclient/rddclient.conf
 ### Command Line Examples
 
 ```bash
-# Cloudflare
-rddclient --provider cloudflare \
-  --zone-id YOUR_ZONE_ID \
-  --api-token YOUR_API_TOKEN \
-  --dns-record ddns.example.com
+# Cloudflare (with API token)
+rddclient --protocol cloudflare \
+  --zone example.com \
+  --login token \
+  --password YOUR_API_TOKEN \
+  --host ddns.example.com
+
+# Cloudflare (with global API key)
+rddclient --protocol cloudflare \
+  --zone example.com \
+  --login your-email@example.com \
+  --password YOUR_GLOBAL_API_KEY \
+  --host ddns.example.com
 
 # DuckDNS
-rddclient --provider duckdns \
+rddclient --protocol duckdns \
   --password YOUR_TOKEN \
-  --dns-record myhost
+  --host myhost
 
 # GoDaddy
-rddclient --provider godaddy \
-  --username YOUR_API_KEY \
+rddclient --protocol godaddy \
+  --login YOUR_API_KEY \
   --password YOUR_API_SECRET \
-  --dns-record ddns.example.com
+  --host ddns.example.com
 
 # No-IP
-rddclient --provider noip \
-  --username YOUR_USERNAME \
+rddclient --protocol noip \
+  --login YOUR_USERNAME \
   --password YOUR_PASSWORD \
-  --dns-record ddns.example.com
+  --host ddns.example.com
 
 # Hurricane Electric
-rddclient --provider he \
+rddclient --protocol he \
   --password YOUR_KEY \
-  --dns-record ddns.example.com
+  --host ddns.example.com
 
 # Use config file instead
-rddclient --config /etc/rddclient/rddclient.conf
+rddclient --file /etc/rddclient/rddclient.conf
 ```
 
 ## Configuration Files
@@ -138,36 +146,37 @@ Create a `rddclient.conf` file for your provider (compatible with ddclient confi
 ### Cloudflare
 
 ```ini
-provider = "cloudflare"
-zone_id = "your_zone_id_here"
-api_token = "your_api_token_here"
-dns_record = "ddns.example.com"
+protocol = "cloudflare"
+zone = "example.com"
+login = "token"
+password = "your_api_token_here"
+host = "ddns.example.com"
 ttl = 300
 ```
 
 ### DigitalOcean
 
 ```ini
-provider = "digitalocean"
-api_token = "your_api_token_here"
-dns_record = "ddns.example.com"
+protocol = "digitalocean"
+password = "your_api_token_here"
+host = "ddns.example.com"
 ```
 
 ### DuckDNS
 
 ```ini
-provider = "duckdns"
+protocol = "duckdns"
 password = "your_token_here"
-dns_record = "myhost"  # without .duckdns.org
+host = "myhost"  # without .duckdns.org
 ```
 
 ### DynDNS2 / No-IP / Generic
 
 ```ini
-provider = "dyndns2"  # or "noip"
+protocol = "dyndns2"  # or "noip"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dynupdate.no-ip.com"
 ```
@@ -175,9 +184,9 @@ dns_record = "ddns.example.com"
 ### Enom
 
 ```ini
-provider = "enom"
+protocol = "enom"
 password = "your_update_token"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dynamic.name-services.com"
 ```
@@ -185,17 +194,17 @@ dns_record = "ddns.example.com"
 ### Freedns (afraid.org)
 
 ```ini
-provider = "freedns"
+protocol = "freedns"
 password = "your_update_token"  # unique per host
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Freemyip
 
 ```ini
-provider = "freemyip"
+protocol = "freemyip"
 password = "your_token"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://freemyip.com"
 ```
@@ -203,27 +212,27 @@ dns_record = "ddns.example.com"
 ### Gandi
 
 ```ini
-provider = "gandi"
-api_token = "your_api_key_here"
-dns_record = "ddns.example.com"
+protocol = "gandi"
+password = "your_api_key_here"
+host = "ddns.example.com"
 ```
 
 ### GoDaddy
 
 ```ini
-provider = "godaddy"
+protocol = "godaddy"
 username = "your_api_key"
 password = "your_api_secret"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Google Domains
 
 ```ini
-provider = "googledomains"  # also: google-domains
+protocol = "googledomains"  # also: google-domains
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://domains.google.com"
 ```
@@ -231,45 +240,45 @@ dns_record = "ddns.example.com"
 ### Hurricane Electric (HE.net)
 
 ```ini
-provider = "he"
+protocol = "he"
 password = "your_update_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Namecheap
 
 ```ini
-provider = "namecheap"
+protocol = "namecheap"
 username = "example.com"  # your domain
 password = "your_ddns_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Porkbun
 
 ```ini
-provider = "porkbun"
+protocol = "porkbun"
 username = "your_api_key"
 password = "your_secret_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Zoneedit
 
 ```ini
-provider = "zoneedit"
+protocol = "zoneedit"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### 1984.is
 
 ```ini
-provider = "1984"  # also: one984
+protocol = "1984"  # also: one984
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.1984.is"
 ```
@@ -277,10 +286,10 @@ dns_record = "ddns.example.com"
 ### ChangeIP
 
 ```ini
-provider = "changeip"
+protocol = "changeip"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "nic.changeip.com"
 ```
@@ -288,17 +297,17 @@ dns_record = "ddns.example.com"
 ### ClouDNS
 
 ```ini
-provider = "cloudns"
+protocol = "cloudns"
 password = "https://ipv4.cloudns.net/api/dynamicURL/?q=YOUR_UNIQUE_URL"
-dns_record = "ddns.example.com"  # hostname embedded in URL
+host = "ddns.example.com"  # hostname embedded in URL
 ```
 
 ### DDNSS
 
 ```ini
-provider = "ddnss"
+protocol = "ddnss"
 password = "your_token"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.ddnss.de"
 ```
@@ -306,10 +315,10 @@ dns_record = "ddns.example.com"
 ### DNS Made Easy
 
 ```ini
-provider = "dnsmadeeasy"  # also: dns-made-easy
+protocol = "dnsmadeeasy"  # also: dns-made-easy
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://cp.dnsmadeeasy.com"
 ```
@@ -317,10 +326,10 @@ dns_record = "ddns.example.com"
 ### DigitalOcean
 
 ```ini
-provider = "digitalocean"ing"
+protocol = "digitalocean"ing"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dinahosting.com"
 ```
@@ -328,19 +337,19 @@ dns_record = "ddns.example.com"
 ### Directnic
 
 ```ini
-provider = "directnic"
+protocol = "directnic"
 # Pre-configured URLs from Directnic dashboard:
 server = "https://www.directnic.com/dns/dynUpdateDDNS?host=...&token=..."  # IPv4 URL
 password = "https://www.directnic.com/dns/dynUpdateDDNS?host=...&token=..."  # IPv6 URL
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### DNSExit2
 
 ```ini
-provider = "dnsexit2"
+protocol = "dnsexit2"
 password = "your_api_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional zone (defaults to dns_record):
 # zone_id = "example.com"
 # Optional TTL (defaults to 5):
@@ -350,19 +359,19 @@ dns_record = "ddns.example.com"
 ### Domeneshop
 
 ```ini
-provider = "domeneshop"
+protocol = "domeneshop"
 username = "your_api_token"
 password = "your_api_secret"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### DonDominio
 
 ```ini
-provider = "dondominio"
+protocol = "dondominio"
 username = "your_username"
 password = "your_api_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dondns.dondominio.com"
 ```
@@ -370,10 +379,10 @@ dns_record = "ddns.example.com"
 ### Dynu
 
 ```ini
-provider = "dynu"
+protocol = "dynu"
 username = "your_username"
 password = "your_password"  # or API key
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://api.dynu.com"
 ```
@@ -381,19 +390,19 @@ dns_record = "ddns.example.com"
 ### EasyDNS
 
 ```ini
-provider = "easydns"
+protocol = "easydns"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Note: EasyDNS requires 10 minutes between updates
 ```
 
 ### Email Only
 
 ```ini
-provider = "emailonly"
+protocol = "emailonly"
 email = "admin@example.com"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Note: This sends email notifications instead of updating DNS
 # Requires system sendmail to be installed and configured
 ```
@@ -401,19 +410,19 @@ dns_record = "ddns.example.com"
 ### Hetzner
 
 ```ini
-provider = "hetzner"
+protocol = "hetzner"
 password = "your_api_token"
-zone_id = "example.com"
-dns_record = "ddns.example.com"
+zone = "example.com"
+host = "ddns.example.com"
 ```
 
 ### Infomaniak
 
 ```ini
-provider = "infomaniak"
+protocol = "infomaniak"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://infomaniak.com"
 ```
@@ -421,19 +430,19 @@ dns_record = "ddns.example.com"
 ### INWX
 
 ```ini
-provider = "inwx"
+protocol = "inwx"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Loopia
 
 ```ini
-provider = "loopia"
+protocol = "loopia"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dns.loopia.se"
 ```
@@ -441,10 +450,10 @@ dns_record = "ddns.example.com"
 ### Mythic Beasts
 
 ```ini
-provider = "mythicbeasts"  # also: mythic-beasts, mythicdyn
+protocol = "mythicbeasts"  # also: mythic-beasts, mythicdyn
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom API server:
 # server = "api.mythic-beasts.com"
 ```
@@ -452,18 +461,18 @@ dns_record = "ddns.example.com"
 ### Njalla
 
 ```ini
-provider = "njalla"
+protocol = "njalla"
 password = "your_api_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 ### Regfish
 
 ```ini
-provider = "regfish"
+protocol = "regfish"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dyndns.regfish.de"
 ```
@@ -471,10 +480,10 @@ dns_record = "ddns.example.com"
 ### Sitelutions
 
 ```ini
-provider = "sitelutions"
+protocol = "sitelutions"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.sitelutions.com"
 ```
@@ -482,10 +491,10 @@ dns_record = "ddns.example.com"
 ### Yandex
 
 ```ini
-provider = "yandex"
+protocol = "yandex"
 password = "your_pdd_token"
-zone_id = "example.com"  # your domain
-dns_record = "ddns.example.com"
+zone = "example.com"  # your domain
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://pddimp.yandex.ru"
 ```
@@ -493,11 +502,11 @@ dns_record = "ddns.example.com"
 ### nsupdate (RFC 2136)
 
 ```ini
-provider = "nsupdate"
+protocol = "nsupdate"
 server = "ns.example.com"
 username = "zone_name"  # or TSIG key name
 password = "tsig_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 ```
 
 **Note:** Full nsupdate support requires a DNS protocol library. Consider using a dedicated nsupdate tool or DNS library for production use.
@@ -505,10 +514,10 @@ dns_record = "ddns.example.com"
 ### CloudXNS
 
 ```ini
-provider = "cloudxns"
+protocol = "cloudxns"
 username = "your_api_key"
 password = "your_secret_key"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.cloudxns.net"
 ```
@@ -516,9 +525,9 @@ dns_record = "ddns.example.com"
 ### DNSPod
 
 ```ini
-provider = "dnspod"
-api_token = "your_token_id,your_token"
-dns_record = "ddns.example.com"
+protocol = "dnspod"
+password = "your_token_id,your_token"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dnsapi.cn"
 ```
@@ -526,10 +535,10 @@ dns_record = "ddns.example.com"
 ### Linode
 
 ```ini
-provider = "linode"
-api_token = "your_api_token"
-zone_id = "your_domain_id"
-dns_record = "your_record_id"
+protocol = "linode"
+password = "your_api_token"
+zone = "your_domain_id"
+host = "your_record_id"
 # Optional custom server:
 # server = "https://api.linode.com"
 ```
@@ -537,10 +546,10 @@ dns_record = "your_record_id"
 ### deSEC
 
 ```ini
-provider = "desec"
-api_token = "your_token"
-zone_id = "example.com"
-dns_record = "ddns.example.com"
+protocol = "desec"
+password = "your_token"
+zone = "example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://update.dedyn.io"
 ```
@@ -548,11 +557,11 @@ dns_record = "ddns.example.com"
 ### LuaDNS
 
 ```ini
-provider = "luadns"
+protocol = "luadns"
 username = "your_email"
-api_token = "your_api_token"
-zone_id = "your_zone_id"
-dns_record = "your_record_id"
+password = "your_api_token"
+zone = "your_zone_id"
+host = "your_record_id"
 # Optional custom server:
 # server = "https://api.luadns.com"
 ```
@@ -560,10 +569,10 @@ dns_record = "your_record_id"
 ### NFSN (NearlyFreeSpeech.NET)
 
 ```ini
-provider = "nfsn"
+protocol = "nfsn"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dynamicdns.park-your-domain.com"
 ```
@@ -571,9 +580,9 @@ dns_record = "ddns.example.com"
 ### Afraid.org (v2)
 
 ```ini
-provider = "afraid"
-api_token = "your_update_token"
-dns_record = "ddns.example.com"
+protocol = "afraid"
+password = "your_update_token"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://freedns.afraid.org"
 ```
@@ -581,10 +590,10 @@ dns_record = "ddns.example.com"
 ### Woima.fi
 
 ```ini
-provider = "woima"
+protocol = "woima"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.woima.fi"
 ```
@@ -592,10 +601,10 @@ dns_record = "ddns.example.com"
 ### Selfhost.de
 
 ```ini
-provider = "selfhost"
+protocol = "selfhost"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://carol.selfhost.de"
 ```
@@ -603,9 +612,9 @@ dns_record = "ddns.example.com"
 ### DDNS.FM
 
 ```ini
-provider = "ddnsfm"  # also: ddns.fm
+protocol = "ddnsfm"  # also: ddns.fm
 password = "your_token"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://api.ddns.fm"
 ```
@@ -613,10 +622,10 @@ dns_record = "ddns.example.com"
 ### DSLReports
 
 ```ini
-provider = "dslreports"  # also: dslreports1
+protocol = "dslreports"  # also: dslreports1
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://www.dslreports.com"
 ```
@@ -624,10 +633,10 @@ dns_record = "ddns.example.com"
 ### DynDNS v1 (Legacy)
 
 ```ini
-provider = "dyndns1"
+protocol = "dyndns1"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://members.dyndns.org"
 ```
@@ -635,9 +644,9 @@ dns_record = "ddns.example.com"
 ### Key-Systems (RRPproxy)
 
 ```ini
-provider = "keysystems"  # also: key-systems
+protocol = "keysystems"  # also: key-systems
 password = "your_token"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dynamicdns.key-systems.net"
 ```
@@ -645,10 +654,10 @@ dns_record = "ddns.example.com"
 ### ZoneEdit v1 (Legacy)
 
 ```ini
-provider = "zoneedit1"
+protocol = "zoneedit1"
 username = "your_username"
 password = "your_password"
-dns_record = "ddns.example.com"
+host = "ddns.example.com"
 # Optional custom server:
 # server = "https://dynamic.zoneedit.com"
 ```

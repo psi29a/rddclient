@@ -1,10 +1,19 @@
-##### Config
+##### rddclient Configuration (ddclient compatible format)
 
-## DNS A record to be updated, you can separate multiple records by comma
-dns_record="ddns.example.com,ddns2.example.com"
-## Cloudflare's Zone ID, you can find this on the landing/overview page of your domain.
-zone_id="ChangeMe"
-## Cloudflare Zone API Token
-api_token="ChangeMe"
-## 120-7200 in seconds or 1 for Auto
+## DNS protocol/provider
+protocol="cloudflare"
+
+## DNS zone name (e.g., example.com)
+zone="example.com"
+
+## Login: use "token" for API token auth, or your email for global API key auth
+login="token"
+
+## Password: API token or global API key
+password="ChangeMe"
+
+## Hostname(s) to be updated - you can separate multiple records by comma
+host="ddns.example.com,ddns2.example.com"
+
+## TTL: 120-7200 in seconds or 1 for Auto
 ttl=120

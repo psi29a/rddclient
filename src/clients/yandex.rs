@@ -16,7 +16,7 @@ impl YandexClient {
         let token = config.password.as_ref()
             .ok_or("password (PDD token) is required for Yandex")?
             .clone();
-        let domain = config.zone_id.as_ref()
+        let domain = config.zone.as_ref()
             .ok_or("zone_id (domain) is required for Yandex")?
             .clone();
         

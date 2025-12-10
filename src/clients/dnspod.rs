@@ -12,7 +12,7 @@ pub struct DnspodClient {
 
 impl DnspodClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let token = config.api_token.as_ref()
+        let token = config.password.as_ref()
             .ok_or("api_token is required for DNSPod")?
             .clone();
         

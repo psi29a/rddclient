@@ -5,41 +5,92 @@ use std::net::IpAddr;
 use serde_json::json;
 
 pub struct CloudflareClient {
-    zone_id: String,
-    api_token: String,
+    login: String,
+    password: String,
+    zone: String,
+    server: String,
     ttl: u32,
 }
 
 impl CloudflareClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let zone_id = config.zone_id.as_ref()
-            .ok_or("zone_id is required for Cloudflare")?
+        let login = config.login.as_ref()
+            .ok_or("login is required for Cloudflare (email or 'token')")?
             .clone();
-        let api_token = config.api_token.as_ref()
-            .ok_or("api_token is required for Cloudflare")?
+        let password = config.password.as_ref()
+            .ok_or("password is required for Cloudflare (API token or global API key)")?
             .clone();
+        let zone = config.zone.as_ref()
+            .ok_or("zone is required for Cloudflare (e.g., example.com)")?
+            .clone();
+        let server = config.server.as_ref()
+            .map(|s| s.clone())
+            .unwrap_or_else(|| "api.cloudflare.com/client/v4".to_string());
         let ttl = config.ttl.unwrap_or(1);
 
         Ok(CloudflareClient {
-            zone_id,
-            api_token,
+            login,
+            password,
+            zone,
+            server,
             ttl,
         })
     }
 
-    fn get_record_id(&self, hostname: &str) -> Result<String, Box<dyn Error>> {
+    fn get_zone_id(&self) -> Result<String, Box<dyn Error>> {
+        log::info!("Getting Cloudflare Zone ID for zone: {}", self.zone);
+
+        let url = format!("https://{}/zones/?name={}", self.server, self.zone);
+        
+        let mut request = minreq::get(&url)
+            .with_header("Content-Type", "application/json");
+        
+        // ddclient authentication: login=token uses Bearer, otherwise X-Auth-Email/Key
+        if self.login == "token" {
+            request = request.with_header("Authorization", format!("Bearer {}", self.password));
+        } else {
+            request = request
+                .with_header("X-Auth-Email", &self.login)
+                .with_header("X-Auth-Key", &self.password);
+        }
+
+        let res = request.send()?;
+        let json: serde_json::Value = res.json()?;
+        
+        if !json["success"].as_bool().unwrap_or(false) {
+            log::error!("Error getting zone ID: {}", json);
+            return Err("Error getting zone ID".into());
+        }
+
+        let zone_id = json["result"][0]["id"]
+            .as_str()
+            .ok_or("No zone found")?
+            .to_string();
+
+        log::info!("Zone ID is {}", zone_id);
+        Ok(zone_id)
+    }
+
+    fn get_record_id(&self, zone_id: &str, hostname: &str) -> Result<String, Box<dyn Error>> {
         log::info!("Fetching DNS record for: {}", hostname);
 
         let url = format!(
-            "https://api.cloudflare.com/client/v4/zones/{}/dns_records?type=A&name={}",
-            self.zone_id, hostname
+            "https://{}/zones/{}/dns_records?type=A&name={}",
+            self.server, zone_id, hostname
         );
 
-        let res = minreq::get(&url)
-            .with_header("Authorization", format!("Bearer {}", self.api_token))
-            .with_header("Content-Type", "application/json")
-            .send()?;
+        let mut request = minreq::get(&url)
+            .with_header("Content-Type", "application/json");
+        
+        if self.login == "token" {
+            request = request.with_header("Authorization", format!("Bearer {}", self.password));
+        } else {
+            request = request
+                .with_header("X-Auth-Email", &self.login)
+                .with_header("X-Auth-Key", &self.password);
+        }
 
+        let res = request.send()?;
         let json: serde_json::Value = res.json()?;
         
         if !json["success"].as_bool().unwrap_or(false) {
@@ -59,7 +110,8 @@ impl CloudflareClient {
 
 impl DnsClient for CloudflareClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
-        let record_id = self.get_record_id(hostname)?;
+        let zone_id = self.get_zone_id()?;
+        let record_id = self.get_record_id(&zone_id, hostname)?;
 
         let body = json!({
             "type": "A",
@@ -69,15 +121,23 @@ impl DnsClient for CloudflareClient {
         });
 
         let url = format!(
-            "https://api.cloudflare.com/client/v4/zones/{}/dns_records/{}",
-            self.zone_id, record_id
+            "https://{}/zones/{}/dns_records/{}",
+            self.server, zone_id, record_id
         );
 
-        let update_res = minreq::put(&url)
-            .with_header("Authorization", format!("Bearer {}", self.api_token))
+        let mut request = minreq::put(&url)
             .with_header("Content-Type", "application/json")
-            .with_json(&body)?
-            .send()?;
+            .with_json(&body)?;
+        
+        if self.login == "token" {
+            request = request.with_header("Authorization", format!("Bearer {}", self.password));
+        } else {
+            request = request
+                .with_header("X-Auth-Email", &self.login)
+                .with_header("X-Auth-Key", &self.password);
+        }
+
+        let update_res = request.send()?;
 
         let update_json: serde_json::Value = update_res.json()?;
         
@@ -91,11 +151,14 @@ impl DnsClient for CloudflareClient {
     }
 
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
-        if self.zone_id.is_empty() {
-            return Err("zone_id is required for Cloudflare".into());
+        if self.login.is_empty() {
+            return Err("login is required for Cloudflare (email or 'token')".into());
         }
-        if self.api_token.is_empty() {
-            return Err("api_token is required for Cloudflare".into());
+        if self.password.is_empty() {
+            return Err("password is required for Cloudflare (API token or global API key)".into());
+        }
+        if self.zone.is_empty() {
+            return Err("zone is required for Cloudflare (e.g., example.com)".into());
         }
         Ok(())
     }

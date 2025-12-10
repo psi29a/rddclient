@@ -19,11 +19,11 @@ impl LuadnsClient {
             .ok_or("username (email) is required for LuaDNS")?
             .clone();
         
-        let token = config.api_token.as_ref()
+        let token = config.password.as_ref()
             .ok_or("api_token is required for LuaDNS")?
             .clone();
         
-        let zone_id = config.zone_id.as_ref()
+        let zone_id = config.zone.as_ref()
             .ok_or("zone_id is required for LuaDNS")?
             .clone();
         
