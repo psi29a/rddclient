@@ -13,7 +13,6 @@ pub struct DigitalOceanClient {
 impl DigitalOceanClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
         let token = config.password.as_ref()
-            .or(config.password.as_ref())
             .ok_or("api_token or password is required for DigitalOcean")?
             .clone();
         
@@ -37,23 +36,47 @@ impl DigitalOceanClient {
     }
 
     fn get_record_id(&self, domain: &str, name: &str, record_type: &str) -> Result<u64, Box<dyn Error>> {
-        let url = format!("{}/v2/domains/{}/records", self.server, domain);
-
-        let response = minreq::get(&url)
-            .with_header("Authorization", format!("Bearer {}", self.token))
-            .with_header("Content-Type", "application/json")
-            .send()?;
-
-        let json: serde_json::Value = response.json()?;
+        let mut page = 1;
+        let per_page = 200; // DigitalOcean max per page
         
-        if let Some(records) = json["domain_records"].as_array() {
-            for record in records {
-                if record["type"] == record_type && record["name"] == name {
-                    if let Some(id) = record["id"].as_u64() {
-                        return Ok(id);
+        loop {
+            let url = format!("{}/v2/domains/{}/records?page={}&per_page={}", 
+                            self.server, domain, page, per_page);
+
+            let response = minreq::get(&url)
+                .with_header("Authorization", format!("Bearer {}", self.token))
+                .with_header("Content-Type", "application/json")
+                .send()?;
+            
+            if response.status_code != 200 {
+                return Err(format!("Failed to fetch records: HTTP {} - {}", 
+                                 response.status_code, 
+                                 response.as_str().unwrap_or("unknown error")).into());
+            }
+
+            let json: serde_json::Value = response.json()?;
+        
+            if let Some(records) = json["domain_records"].as_array() {
+                for record in records {
+                    if record["type"] == record_type && record["name"] == name {
+                        if let Some(id) = record["id"].as_u64() {
+                            log::debug!("Found record ID {} for {}.{}", id, name, domain);
+                            return Ok(id);
+                        }
+                    }
+                }
+                
+                // Check if there are more pages
+                if let Some(links) = json["links"].as_object() {
+                    if links.get("pages").and_then(|p| p.get("next")).is_some() {
+                        page += 1;
+                        continue;
                     }
                 }
             }
+            
+            // No more pages or no records found
+            break;
         }
 
         Err(format!("No {} record found for {}.{}", record_type, name, domain).into())

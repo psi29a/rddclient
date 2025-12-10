@@ -36,8 +36,8 @@ impl RegfishClient {
 impl DnsClient for RegfishClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
-            "{}/?fqdn={}&forcehost=1&authtype=secure&token={}",
-            self.server, hostname, self.password
+            "{}/?fqdn={}&myip={}&forcehost=1&authtype=secure&token={}",
+            self.server, hostname, ip, self.password
         );
 
         log::info!("Updating {} with Regfish", hostname);

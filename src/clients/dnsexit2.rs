@@ -46,7 +46,7 @@ impl DnsClient for Dnsexit2Client {
 
         // Determine record type and extract hostname from host
         let (record_type, name) = match ip {
-            IpAddr::V4(_) => ("A", hostname.strip_suffix(&format!("  .{}", zone)).unwrap_or("")),
+            IpAddr::V4(_) => ("A", hostname.strip_suffix(&format!(".{}", zone)).unwrap_or("")),
             IpAddr::V6(_) => ("AAAA", hostname.strip_suffix(&format!(".{}", zone)).unwrap_or("")),
         };
 

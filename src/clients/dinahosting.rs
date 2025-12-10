@@ -46,14 +46,20 @@ impl DnsClient for DinahostingClient {
         };
 
         let url = format!(
-            "{}/special/api.php?AUTH_USER={}&AUTH_PWD={}&command=Domain_Zone_UpdateDynDNS&domain={}&zone={}&type={}&ip={}",
-            self.server, self.username, self.password, domain, hostname, record_type, ip
+            "{}/special/api.php?command=Domain_Zone_UpdateDynDNS&domain={}&zone={}&type={}&ip={}",
+            self.server, domain, hostname, record_type, ip
         );
 
         log::info!("Updating {} with Dinahosting", hostname);
 
+        // Use HTTP Basic Auth header instead of URL parameters for security
+        let auth = format!("{}:{}", self.username, self.password);
+        use base64::{Engine as _, engine::general_purpose};
+        let encoded_auth = general_purpose::STANDARD.encode(auth.as_bytes());
+
         let response = minreq::get(&url)
             .with_header("User-Agent", crate::USER_AGENT)
+            .with_header("Authorization", &format!("Basic {}", encoded_auth))
             .send()?;
 
         let status_code = response.status_code;

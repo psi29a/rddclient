@@ -9,7 +9,6 @@ A fast, lightweight Dynamic DNS updater written in Rust that supports multiple D
 - ✅ **[Cloudflare](https://www.cloudflare.com)** - Full API support with zone management
 - ✅ **[ChangeIP](https://www.changeip.com)** - Legacy JSON protocol with basic auth
 - ✅ **[ClouDNS](https://www.cloudns.net)** - Simple dynurl-based updates
-- ✅ **[CloudXNS](https://www.cloudxns.net)** - REST API with API key/secret
 - ✅ **[DDNS.FM](https://ddns.fm)** - DDNS service with REST API
 - ✅ **[DDNSS](https://www.ddnss.de)** - Simple token-based GET protocol
 - ✅ **[deSEC](https://desec.io)** - German DNS with token auth (DynDNS2-compatible)
@@ -67,7 +66,7 @@ The `dyndns2` provider also works with many other services that support the DynD
 - 🚀 **Blazingly fast** - Compiled Rust vs interpreted Perl 
 - 📦 **Tiny binary** - ~1.2MB vs ddclient's 200KB+ Perl script + dependencies
 - 🎯 **Drop-in replacement** - Compatible with ddclient config format and workflows
-- 🌍 **Full IPv6 support** - All 53 providers support both A and AAAA records
+- 🌍 **Full IPv6 support** - All 52 providers support both A and AAAA records
 - 📝 **Flexible configuration** - ddclient-compatible config files or command-line arguments
 - 🔄 **Smart IP detection** - Web services, network interfaces, custom commands, or manual IP
 - 💾 **State management** - Tracks IP changes to minimize unnecessary DNS updates
@@ -278,7 +277,7 @@ Contributions welcome! See provider guidelines in [`docs/ProviderGuidelines.md`]
 See [`docs/parity.md`](docs/parity.md) for complete feature parity tracking with ddclient.
 
 **Completed:**
-- ✅ Full IPv6 support (all 53 providers)
+- ✅ Full IPv6 support (all 52 providers)
 - ✅ `--force` flag for forced updates
 - ✅ ddclient config file compatibility
 - ✅ State management & IP change detection (v0.6.0)

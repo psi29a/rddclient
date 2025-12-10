@@ -5,7 +5,6 @@ pub mod afraid;
 pub mod changeip;
 pub mod cloudflare;
 pub mod cloudns;
-pub mod cloudxns;
 pub mod ddnsfm;
 pub mod ddnss;
 pub mod desec;
@@ -76,7 +75,7 @@ pub fn create_client(provider: &str, config: &crate::config::Config) -> Result<B
         "changeip" => Ok(Box::new(changeip::ChangeipClient::new(config)?)),
         "cloudflare" => Ok(Box::new(cloudflare::CloudflareClient::new(config)?)),
         "cloudns" => Ok(Box::new(cloudns::CloudnsClient::new(config)?)),
-        "cloudxns" => Ok(Box::new(cloudxns::CloudXnsClient::new(config)?)),
+        // "cloudxns" - REMOVED: Service defunct, DNS provider shut down
         "ddnsfm" | "ddns.fm" => Ok(Box::new(ddnsfm::DdnsfmClient::new(config)?)),
         "ddnss" => Ok(Box::new(ddnss::DdnssClient::new(config)?)),
         "desec" => Ok(Box::new(desec::DesecClient::new(config)?)),

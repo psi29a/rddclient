@@ -28,6 +28,21 @@ impl HetznerClient {
         })
     }
 
+    /// Extract subdomain from FQDN by stripping zone suffix
+    /// e.g., "www.example.com" with zone "example.com" -> "www"
+    fn extract_subdomain(&self, hostname: &str) -> String {
+        let zone_suffix = format!(".{}", self.zone_id);
+        if let Some(subdomain) = hostname.strip_suffix(&zone_suffix) {
+            subdomain.to_string()
+        } else if hostname == self.zone_id {
+            // Apex domain
+            "@".to_string()
+        } else {
+            // No match, use as-is
+            hostname.to_string()
+        }
+    }
+
     fn get_record_id(&self, hostname: &str, record_type: &str) -> Result<String, Box<dyn Error>> {
         let url = format!("{}/records?zone_id={}", self.server, self.zone_id);
         
@@ -41,18 +56,23 @@ impl HetznerClient {
 
         let json: serde_json::Value = response.json()?;
         
+        // Strip zone suffix to get subdomain for comparison
+        let subdomain = self.extract_subdomain(hostname);
+        
         if let Some(records) = json["records"].as_array() {
             for record in records {
-                if record["name"].as_str() == Some(hostname) 
+                // Compare against API's relative names (e.g., "www" not "www.example.com")
+                if record["name"].as_str() == Some(&subdomain) 
                     && record["type"].as_str() == Some(record_type) {
                     if let Some(id) = record["id"].as_str() {
+                        log::debug!("Found record ID {} for {} (subdomain: {})", id, hostname, subdomain);
                         return Ok(id.to_string());
                     }
                 }
             }
         }
 
-        Err(format!("Record {} not found", hostname).into())
+        Err(format!("Record {} (subdomain: {}) not found", hostname, subdomain).into())
     }
 }
 
@@ -69,11 +89,14 @@ impl DnsClient for HetznerClient {
         
         let url = format!("{}/records/{}", self.server, record_id);
         
+        // Use subdomain (not FQDN) in API call
+        let subdomain = self.extract_subdomain(hostname);
+        
         let payload = serde_json::json!({
             "value": ip.to_string(),
             "ttl": 60,
             "type": record_type,
-            "name": hostname,
+            "name": subdomain,
             "zone_id": self.zone_id
         });
 

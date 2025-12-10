@@ -109,7 +109,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     for hostname in config.dns_records() {
         // Check if IP has changed
         let host_state = state_manager.get(&hostname);
-        let ip_changed = host_state.map_or(true, |state| state.ip_changed(ip));
+        let ip_changed = host_state.is_none_or(|state| state.ip_changed(ip));
         
         // Check rate limits
         let (should_update, skip_reason) = state_manager.should_update(
