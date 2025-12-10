@@ -1,0 +1,28 @@
+[Unit]
+Description=rddclient - Rust Dynamic DNS Client
+Documentation=https://github.com/psi29a/rddclient
+Wants=network-online.target
+After=network-online.target nss-lookup.target
+
+[Service]
+Type=simple
+# Run rddclient in foreground mode (when daemon mode is implemented)
+# For now, use a timer unit (see rddclient.timer)
+ExecStart=/usr/local/bin/rddclient --file /etc/rddclient/rddclient.conf
+
+# Security hardening
+DynamicUser=yes
+StateDirectory=rddclient
+ConfigurationDirectory=rddclient
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+ReadWritePaths=/var/lib/rddclient
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5min
+
+[Install]
+WantedBy=multi-user.target

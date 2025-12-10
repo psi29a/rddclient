@@ -1,0 +1,13 @@
+[Unit]
+Description=rddclient Dynamic DNS Update Timer
+Documentation=https://github.com/psi29a/rddclient
+Requires=rddclient.service
+
+[Timer]
+# Run every 5 minutes (adjust as needed)
+OnBootSec=1min
+OnUnitActiveSec=5min
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,71 @@
+######################################################################
+## rddclient Configuration Example
+######################################################################
+## This is a minimal example configuration file.
+## See the provider-specific examples for more detailed configurations:
+##   - cloudflare.conf
+##   - duckdns.conf
+##   - noip.conf
+##
+## Configuration format: ddclient compatible
+######################################################################
+
+## IP detection method
+## Options: web, if, cmd
+use = web
+web = https://api.ipify.org
+
+## For IPv6, use:
+# web = https://api64.ipify.org
+
+
+######################################################################
+## Cloudflare Example
+######################################################################
+## DNS provider/protocol
+protocol = cloudflare
+
+## DNS zone name (e.g., example.com)
+zone = example.com
+
+## Hostname(s) to be updated (comma-separated for multiple)
+host = ddns.example.com, ddns2.example.com
+
+## Authentication
+## Option 1 (Recommended): API Token
+##   login = token
+##   password = your_api_token_here
+##
+## Option 2: Global API Key
+##   login = your-email@example.com
+##   password = your_global_api_key_here
+login = token
+password = ChangeMe
+
+## Optional: TTL in seconds (120-7200) or 1 for Auto
+# ttl = 120
+
+
+######################################################################
+## DuckDNS Example
+######################################################################
+# protocol = duckdns
+# host = mysubdomain
+# password = your-duckdns-token
+
+
+######################################################################
+## No-IP Example
+######################################################################
+# protocol = noip
+# host = myhostname.ddns.net
+# login = your-username
+# password = your-password
+
+
+######################################################################
+## Multiple Providers
+######################################################################
+## Currently, rddclient processes the first configuration block.
+## For multiple providers, use separate config files or run multiple times.
+######################################################################

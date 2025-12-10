@@ -1,11 +1,11 @@
 [package]
-name = "cloudflareddns"
-version = "0.3.0"
+name = "rddclient"
+version = "0.6.0"
 authors = ["Bret Curtis <psi29a@gmail.com>"]
-description = "small, fast rust based cloudflare dns zone updator"
+description = "Fast, lightweight multi-provider Dynamic DNS updater supporting Cloudflare, DynDNS2, Namecheap, and more"
 license = "GPLv3"
 readme = "README.md"
-repository = "https://github.com/psi29a/cloudflareddns"
+repository = "https://github.com/psi29a/rddclient"
 edition = "2021"
 
 [profile.release]
@@ -19,12 +19,18 @@ panic = "abort"
 [dependencies]
 serde = { version = "1.0.219", default-features = false, features = ["derive"] }
 serde_json = "1.0"
-config = { version = "0.15.19", default-features = false, features= ["ini"] }
 env_logger = { version="0.11.6", default-features = false, features = ["humantime", "auto-color"] }
 log = "0.4.29"
 clap = { version = "4.5.53", default-features = false, features = ["std", "help", "derive"] }
 minreq = { version = "2.14.1", default-features = false, features= ["json-using-serde", "https-rustls"] }
+base64 = { version = "0.22", default-features = false, features = ["alloc", "std"] }
+dirs = "5.0"
+sha1 = { version = "0.10.6", default-features = false, features = ["std"] }
+hex = { version = "0.4.3", default-features = false, features = ["alloc", "std"] }
+urlencoding = { version = "2.1.3", default-features = false }
+rand = { version = "0.8", default-features = false, features = ["std", "std_rng"] }
 
 [dev-dependencies]
 cross = "0.2.5"
 mockito = "1.7.1"
+tempfile = "3.14"
