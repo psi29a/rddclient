@@ -7,17 +7,13 @@ use std::net::IpAddr;
 /// Uses DynDNS2 protocol with Regfish's server
 pub struct RegfishClient {
     server: String,
-    username: String,
-    password: String,
+    token: String,
 }
 
 impl RegfishClient {
     pub fn new(config: &Config) -> Result<Self, Box<dyn Error>> {
-        let username = config.login.as_ref()
-            .ok_or("username is required for Regfish")?
-            .clone();
-        let password = config.password.as_ref()
-            .ok_or("password is required for Regfish")?
+        let token = config.password.as_ref()
+            .ok_or("token is required for Regfish (use password field)")?
             .clone();
         
         let server = config.server.as_ref()
@@ -26,8 +22,7 @@ impl RegfishClient {
 
         Ok(RegfishClient {
             server,
-            username,
-            password,
+            token,
         })
     }
 }
@@ -36,7 +31,7 @@ impl DnsClient for RegfishClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let url = format!(
             "{}/?fqdn={}&myip={}&forcehost=1&authtype=secure&token={}",
-            self.server, hostname, ip, self.password
+            self.server, hostname, ip, self.token
         );
 
         log::info!("Updating {} with Regfish", hostname);
@@ -74,11 +69,8 @@ impl DnsClient for RegfishClient {
     }
 
     fn validate_config(&self) -> Result<(), Box<dyn Error>> {
-        if self.username.is_empty() {
-            return Err("username is required for Regfish".into());
-        }
-        if self.password.is_empty() {
-            return Err("password is required for Regfish".into());
+        if self.token.is_empty() {
+            return Err("token is required for Regfish".into());
         }
         Ok(())
     }

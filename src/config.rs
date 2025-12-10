@@ -84,6 +84,9 @@ impl Config {
         if self.host.is_none() || self.host.as_ref().unwrap().is_empty() {
             return Err("Host is required (use --host)".into());
         }
+        if self.protocol.is_none() || self.protocol.as_ref().unwrap().is_empty() {
+            return Err("Protocol is required (use --protocol)".into());
+        }
 
         Ok(())
     }
@@ -468,5 +471,27 @@ host2.example.com
         assert_eq!(parse_interval("25d").unwrap(), 2160000);
         assert!(parse_interval("invalid").is_err());
         assert!(parse_interval("").is_err());
+    }
+
+    #[test]
+    fn test_parse_interval_edge_cases() {
+        // Zero interval is valid
+        assert_eq!(parse_interval("0s").unwrap(), 0);
+        assert_eq!(parse_interval("0m").unwrap(), 0);
+        assert_eq!(parse_interval("0h").unwrap(), 0);
+        
+        // Unit without number should error
+        assert!(parse_interval("s").is_err());
+        assert!(parse_interval("m").is_err());
+        assert!(parse_interval("h").is_err());
+        assert!(parse_interval("d").is_err());
+        
+        // Large values near u64 max (u64::MAX = 18446744073709551615)
+        // Test a reasonably large value that won't overflow
+        assert_eq!(parse_interval("1000000d").unwrap(), 86400000000);
+        
+        // Invalid formats
+        assert!(parse_interval("1.5h").is_err()); // decimal not supported
+        assert!(parse_interval("-5m").is_err()); // negative not supported
     }
 }

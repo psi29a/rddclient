@@ -23,6 +23,67 @@ pub trait DnsClient {
 }
 ```
 
+## Configuration Reference
+
+### The Config Struct
+
+The `Config` struct (defined in `src/config.rs`) contains all configuration options that can be specified via configuration file or CLI arguments. When implementing a provider, you'll receive a `&Config` reference in the `new()` constructor.
+
+**Available Fields:**
+
+| Field | Type | Required | Description | Example |
+|-------|------|----------|-------------|---------|
+| `protocol` | `Option<String>` | Yes | Provider name/protocol identifier | `"cloudflare"`, `"dyndns2"` |
+| `login` | `Option<String>` | Varies | Username, email, or account ID | `"user@example.com"` |
+| `password` | `Option<String>` | Varies | API token, password, or secret key | `"abc123token"` |
+| `server` | `Option<String>` | No | Custom API endpoint URL | `"https://api.provider.com"` |
+| `zone` | `Option<String>` | Varies | DNS zone or domain name | `"example.com"` |
+| `host` | `Option<String>` | Yes | Hostname(s) to update | `"subdomain.example.com"` |
+| `ttl` | `Option<u32>` | No | DNS record TTL in seconds | `3600`, `300` |
+| `email` | `Option<String>` | No | Contact email for some providers | `"admin@example.com"` |
+| `ip` | `Option<String>` | No | Override IP detection | `"203.0.113.1"` |
+
+**Field Access Patterns:**
+
+```rust
+// Required field - return error if missing
+let api_token = config.password.as_ref()
+    .ok_or("API token (password) is required for Provider")?
+    .clone();
+
+// Optional field with default value
+let server = config.server.clone()
+    .unwrap_or_else(|| "https://api.provider.com".to_string());
+
+// Optional field - only use if provided
+if let Some(ttl) = config.ttl {
+    // Use custom TTL
+}
+
+// Check if field is present
+if config.zone.is_none() {
+    return Err("Zone is required for this provider".into());
+}
+```
+
+**Common Configuration Patterns:**
+
+1. **Token-based authentication** (Cloudflare, DigitalOcean):
+   - Use `config.password` for API token
+   - Optional: `config.login` for account/user ID
+
+2. **Username/Password authentication** (DynDNS2):
+   - Use `config.login` for username
+   - Use `config.password` for password
+
+3. **Zone-based providers** (Cloudflare, Hetzner):
+   - Require `config.zone` for the DNS zone
+   - Extract zone from hostname if not provided
+
+4. **Custom endpoints**:
+   - Allow `config.server` to override default API URL
+   - Always provide a sensible default
+
 ## Step-by-Step Implementation
 
 ### 1. Create Provider Module
@@ -129,7 +190,9 @@ Also add to the error message list of supported providers.
 
 ### 3. Add Tests
 
-Add unit tests at the bottom of your provider module:
+Add unit tests at the bottom of your provider module. Include basic unit tests for client creation and validation, plus HTTP mocking tests for the update logic.
+
+#### Basic Unit Tests
 
 ```rust
 #[cfg(test)]
@@ -175,6 +238,151 @@ mod tests {
     }
 }
 ```
+
+#### HTTP Response Mocking (Optional but Recommended)
+
+For testing `update_record()` without making real API calls, consider using HTTP mocking libraries. This project currently uses integration-style tests that don't require external dependencies, but you can enhance testing with mocking:
+
+**Option 1: Manual test server (lightweight)**
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::TcpListener;
+    use std::io::{Read, Write};
+    use std::thread;
+    
+    #[test]
+    fn test_update_record_success() {
+        // Start a mock server on a random port
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        
+        // Spawn thread to handle one request
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut buffer = [0; 512];
+            stream.read(&mut buffer).unwrap();
+            
+            // Send mock successful response
+            let response = "HTTP/1.1 200 OK\r\nContent-Length: 15\r\n\r\n{\"success\":true}";
+            stream.write_all(response.as_bytes()).unwrap();
+        });
+        
+        // Create client pointing to mock server
+        let mut config = create_test_config();
+        config.server = Some(format!("http://127.0.0.1:{}", addr.port()));
+        let client = NewProviderClient::new(&config).unwrap();
+        
+        // Test the update - should succeed
+        let result = client.update_record("test.example.com", "203.0.113.1".parse().unwrap());
+        assert!(result.is_ok());
+    }
+}
+```
+
+**Option 2: mockito/wiremock crate (full-featured)**
+
+If you prefer a more robust solution, add a dev-dependency:
+
+```toml
+[dev-dependencies]
+mockito = "1.0"  # or wiremock = "0.6"
+```
+
+Then write tests like:
+
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mockito::{Mock, ServerGuard};
+    
+    #[test]
+    fn test_update_record_with_mock() {
+        let mut server = mockito::Server::new();
+        
+        // Mock successful API response
+        let mock = server.mock("POST", "/api/update")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"status":"success"}"#)
+            .create();
+        
+        let mut config = create_test_config();
+        config.server = Some(server.url());
+        let client = NewProviderClient::new(&config).unwrap();
+        
+        let result = client.update_record("test.example.com", "203.0.113.1".parse().unwrap());
+        
+        assert!(result.is_ok());
+        mock.assert();  // Verify the API was called
+    }
+    
+    #[test]
+    fn test_update_record_auth_failure() {
+        let mut server = mockito::Server::new();
+        
+        let mock = server.mock("POST", "/api/update")
+            .with_status(401)
+            .with_body("Unauthorized")
+            .create();
+        
+        let mut config = create_test_config();
+        config.server = Some(server.url());
+        let client = NewProviderClient::new(&config).unwrap();
+        
+        let result = client.update_record("test.example.com", "203.0.113.1".parse().unwrap());
+        
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("auth"));
+    }
+}
+```
+
+#### Integration Tests with Real Credentials
+
+For integration tests with actual API credentials (optional):
+
+1. Create tests in a separate module gated by a feature flag
+2. Use environment variables for credentials (never hardcode)
+3. Run sparingly to avoid rate limits
+
+```rust
+#[cfg(all(test, feature = "integration-tests"))]
+mod integration_tests {
+    use super::*;
+    
+    #[test]
+    #[ignore]  // Run only with --ignored flag
+    fn test_real_api_update() {
+        let token = std::env::var("NEWPROVIDER_TOKEN")
+            .expect("NEWPROVIDER_TOKEN env var required for integration tests");
+        
+        let config = Config {
+            protocol: Some("newprovider".to_string()),
+            password: Some(token),
+            host: Some("test.example.com".to_string()),
+            ..Default::default()
+        };
+        
+        let client = NewProviderClient::new(&config).unwrap();
+        // Only test with a dedicated test hostname
+        let result = client.update_record("test.example.com", "203.0.113.1".parse().unwrap());
+        assert!(result.is_ok());
+    }
+}
+```
+
+**Testing Best Practices:**
+
+- ✅ **Do**: Test client creation, validation, and error handling with unit tests
+- ✅ **Do**: Mock HTTP responses to test update logic without real API calls
+- ✅ **Do**: Test both IPv4 and IPv6 address handling
+- ✅ **Do**: Test error cases (auth failure, invalid response, network errors)
+- ⚠️ **Caution**: Integration tests with real APIs should be opt-in and rate-limited
+- ❌ **Don't**: Make real API calls in regular unit tests (slow, unreliable, consumes quotas)
 
 ### 4. Create Example Configuration
 

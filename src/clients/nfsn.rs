@@ -91,7 +91,9 @@ impl NfsnClient {
         let response = request
             .with_header("User-Agent", crate::USER_AGENT)
             .with_header("X-NFSN-Authentication", auth_header)
-            .send()?;
+            .with_timeout(30)  // 30 second timeout to prevent indefinite hangs
+            .send()
+            .map_err(|e| format!("NFSN API request failed: {}", e))?;
         
         let status = response.status_code;
         let body = response.as_str()?.to_string();
@@ -170,7 +172,7 @@ impl DnsClient for NfsnClient {
             "name={}&type={}&data={}&ttl=3600",
             urlencoding::encode(&name),
             record_type,
-            ip
+            urlencoding::encode(&ip.to_string())
         );
         self.make_request(&add_path, "POST", &add_body)?;
         
