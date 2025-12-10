@@ -58,15 +58,21 @@ impl HetznerClient {
 
 impl DnsClient for HetznerClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
-        log::info!("Fetching record ID for {}", hostname);
-        let record_id = self.get_record_id(hostname, "A")?;
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
+        
+        log::info!("Fetching {} record ID for {}", record_type, hostname);
+        let record_id = self.get_record_id(hostname, record_type)?;
         
         let url = format!("{}/records/{}", self.server, record_id);
         
         let payload = serde_json::json!({
             "value": ip.to_string(),
             "ttl": 60,
-            "type": "A",
+            "type": record_type,
             "name": hostname,
             "zone_id": self.zone_id
         });

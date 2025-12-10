@@ -54,6 +54,10 @@ pub struct Args {
     /// Quiet mode - suppress all output except errors
     #[arg(long, default_value = "false")]
     pub quiet: bool,
+
+    /// Force DNS update even if IP hasn't changed - ddclient compatible
+    #[arg(long, default_value = "false")]
+    pub force: bool,
 }
 
 impl Args {

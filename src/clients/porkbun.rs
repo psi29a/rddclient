@@ -47,7 +47,13 @@ impl DnsClient for PorkbunClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let (name, domain) = self.parse_hostname(hostname);
         
-        let url = format!("{}/dns/editByNameType/{}/A", self.server, domain);
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
+        
+        let url = format!("{}/dns/editByNameType/{}/{}", self.server, domain, record_type);
         
         let subdomain = if name.is_empty() { None } else { Some(name.as_str()) };
 

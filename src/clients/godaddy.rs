@@ -50,9 +50,15 @@ impl DnsClient for GoDaddyClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let (name, domain) = self.parse_hostname(hostname);
         
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
+        
         let url = format!(
-            "{}/v1/domains/{}/records/A/{}",
-            self.server, domain, name
+            "{}/v1/domains/{}/records/{}/{}",
+            self.server, domain, record_type, name
         );
 
         let body = json!([{

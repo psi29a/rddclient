@@ -36,7 +36,7 @@ impl DigitalOceanClient {
         }
     }
 
-    fn get_record_id(&self, domain: &str, name: &str) -> Result<u64, Box<dyn Error>> {
+    fn get_record_id(&self, domain: &str, name: &str, record_type: &str) -> Result<u64, Box<dyn Error>> {
         let url = format!("{}/v2/domains/{}/records", self.server, domain);
 
         let response = minreq::get(&url)
@@ -48,7 +48,7 @@ impl DigitalOceanClient {
         
         if let Some(records) = json["domain_records"].as_array() {
             for record in records {
-                if record["type"] == "A" && record["name"] == name {
+                if record["type"] == record_type && record["name"] == name {
                     if let Some(id) = record["id"].as_u64() {
                         return Ok(id);
                     }
@@ -56,7 +56,7 @@ impl DigitalOceanClient {
             }
         }
 
-        Err(format!("No A record found for {}.{}", name, domain).into())
+        Err(format!("No {} record found for {}.{}", record_type, name, domain).into())
     }
 }
 
@@ -64,9 +64,15 @@ impl DnsClient for DigitalOceanClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let (name, domain) = self.parse_hostname(hostname);
         
-        log::info!("Updating {} with DigitalOcean", hostname);
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
         
-        let record_id = self.get_record_id(&domain, &name)?;
+        log::info!("Updating {} with DigitalOcean ({})", hostname, record_type);
+        
+        let record_id = self.get_record_id(&domain, &name, record_type)?;
         
         let url = format!("{}/v2/domains/{}/records/{}", self.server, domain, record_id);
 

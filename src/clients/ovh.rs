@@ -54,15 +54,21 @@ impl DnsClient for OvhClient {
     fn update_record(&self, hostname: &str, ip: IpAddr) -> Result<(), Box<dyn Error>> {
         let (subdomain, domain) = self.parse_hostname(hostname);
         
+        // Determine record type based on IP version
+        let record_type = match ip {
+            IpAddr::V4(_) => "A",
+            IpAddr::V6(_) => "AAAA",
+        };
+        
         // Note: Full OVH implementation requires request signing
         // This is a simplified version - production use requires proper signing
         let url = format!("{}/domain/zone/{}/record", self.server, domain);
 
-        log::info!("Updating {} with OVH (simplified API)", hostname);
+        log::info!("Updating {} with OVH (simplified API, {})", hostname, record_type);
         log::warn!("OVH implementation requires proper request signing for production use");
 
         let body = json!({
-            "fieldType": "A",
+            "fieldType": record_type,
             "subDomain": subdomain,
             "target": ip.to_string()
         });

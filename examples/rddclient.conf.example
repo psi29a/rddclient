@@ -7,10 +7,9 @@
 ##   - duckdns.conf
 ##   - noip.conf
 ##
-## Configuration format: INI style (ddclient compatible)
+## Configuration format: ddclient compatible
 ######################################################################
 
-[global]
 ## IP detection method
 ## Options: web, if, cmd
 use = web
@@ -19,14 +18,10 @@ web = https://api.ipify.org
 ## For IPv6, use:
 # web = https://api64.ipify.org
 
-## Quiet mode (less verbose output)
-# quiet = true
-
 
 ######################################################################
 ## Cloudflare Example
 ######################################################################
-[cloudflare]
 ## DNS provider/protocol
 protocol = cloudflare
 
@@ -54,7 +49,6 @@ password = ChangeMe
 ######################################################################
 ## DuckDNS Example
 ######################################################################
-# [duckdns]
 # protocol = duckdns
 # host = mysubdomain
 # password = your-duckdns-token
@@ -63,7 +57,6 @@ password = ChangeMe
 ######################################################################
 ## No-IP Example
 ######################################################################
-# [noip]
 # protocol = noip
 # host = myhostname.ddns.net
 # login = your-username
@@ -73,6 +66,6 @@ password = ChangeMe
 ######################################################################
 ## Multiple Providers
 ######################################################################
-## You can define multiple sections for different providers or zones
-## Each section will be updated independently
+## Currently, rddclient processes the first configuration block.
+## For multiple providers, use separate config files or run multiple times.
 ######################################################################
