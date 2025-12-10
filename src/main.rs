@@ -52,9 +52,36 @@ fn main() -> Result<(), Box<dyn Error>> {
     let cache_path = args.cache.as_ref().map(std::path::PathBuf::from);
     let mut state_manager = state::StateManager::new(cache_path)?;
 
-    // Get IP address
-    let ip = ip::get_ip(config.ip.as_deref())?;
-    log::info!("IP address: {}", ip);
+    // Determine IP detection method
+    let detection_method = if let Some(ip_str) = config.ip.as_deref() {
+        ip::IpDetectionMethod::Manual(ip_str.to_string())
+    } else if let Some(use_method) = args.use_method.as_deref() {
+        match use_method {
+            "ip" => {
+                return Err("--use=ip requires --ip parameter".into());
+            }
+            "web" => ip::IpDetectionMethod::Web(args.web.clone()),
+            "if" => {
+                let iface = args.if_name.as_deref()
+                    .ok_or("--use=if requires --if parameter")?;
+                ip::IpDetectionMethod::Interface(iface.to_string())
+            }
+            "cmd" => {
+                let cmd = args.cmd.as_deref()
+                    .ok_or("--use=cmd requires --cmd parameter")?;
+                ip::IpDetectionMethod::Command(cmd.to_string())
+            }
+            _ => {
+                return Err(format!("Unknown IP detection method: {}", use_method).into());
+            }
+        }
+    } else {
+        ip::IpDetectionMethod::Web(None)
+    };
+
+    // Get IP address using the chosen method
+    let ip = ip::get_ip_with_method(&detection_method)?;
+    log::info!("IP address: {} (detected via {:?})", ip, detection_method);
 
     // Create the appropriate DNS client
     let client = clients::create_client(protocol, &config)?;

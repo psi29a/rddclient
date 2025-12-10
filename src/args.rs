@@ -62,6 +62,22 @@ pub struct Args {
     /// Force DNS update even if IP hasn't changed - ddclient compatible
     #[arg(long, default_value = "false")]
     pub force: bool,
+
+    /// IP detection method: 'ip', 'web', 'if', 'cmd' - ddclient compatible
+    #[arg(long)]
+    pub use_method: Option<String>,
+
+    /// Network interface for IP detection (use with --use=if) - ddclient compatible
+    #[arg(long)]
+    pub if_name: Option<String>,
+
+    /// Command to execute for IP detection (use with --use=cmd) - ddclient compatible
+    #[arg(long)]
+    pub cmd: Option<String>,
+
+    /// Web service URL for IP detection (use with --use=web) - ddclient compatible
+    #[arg(long)]
+    pub web: Option<String>,
 }
 
 impl Args {

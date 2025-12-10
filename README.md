@@ -69,7 +69,8 @@ The `dyndns2` provider also works with many other services that support the DynD
 - 🎯 **Drop-in replacement** - Compatible with ddclient config format and workflows
 - 🌍 **Full IPv6 support** - All 53 providers support both A and AAAA records
 - 📝 **Flexible configuration** - ddclient-compatible config files or command-line arguments
-- 🔄 **Smart IP detection** - Automatic IP detection with multiple fallback sources
+- 🔄 **Smart IP detection** - Web services, network interfaces, custom commands, or manual IP
+- 💾 **State management** - Tracks IP changes to minimize unnecessary DNS updates
 - ⚙️ **Easily extensible** - Clean architecture for adding new providers
 
 ## Installation
@@ -122,6 +123,22 @@ host = ddns.example.com
 - [`examples/noip.conf`](examples/noip.conf) - No-IP setup
 - [`examples/namecheap.conf`](examples/namecheap.conf) - Namecheap setup
 - [`examples/rddclient.conf.example`](examples/rddclient.conf.example) - Multi-provider template
+
+### Advanced IP Detection
+
+```bash
+# Use specific network interface
+rddclient --file myconfig.conf --use-method if --if-name eth0
+
+# Use custom command
+rddclient --file myconfig.conf --use-method cmd --cmd 'curl -s ifconfig.me'
+
+# Use custom web service
+rddclient --file myconfig.conf --use-method web --web https://api64.ipify.org
+
+# Manual IP specification
+rddclient --file myconfig.conf --ip 203.0.113.42
+```
 
 ## Documentation
 
@@ -251,6 +268,7 @@ See [`docs/parity.md`](docs/parity.md) for complete feature parity tracking with
 - ✅ ddclient config file compatibility
 - ✅ State management & IP change detection (v0.6.0)
 - ✅ `--cache` file support for persistent state
+- ✅ Advanced IP detection (v0.6.0): `--use-method`, `--if-name`, `--cmd`, `--web`
 
 **In Progress:**
 - Daemon mode with `--daemon` flag
@@ -259,5 +277,4 @@ See [`docs/parity.md`](docs/parity.md) for complete feature parity tracking with
 **Planned:**
 - Email notifications
 - Proxy support
-- Advanced IP detection (`--use=if`, `--use=cmd`)
 
