@@ -49,7 +49,7 @@ impl DnsClient for OvhClient {
 
         let response = minreq::get(&url)
             .with_header("User-Agent", crate::USER_AGENT)
-            .with_header("Authorization", &format!("Basic {}", encoded_auth))
+            .with_header("Authorization", format!("Basic {}", encoded_auth))
             .send()?;
 
         let status_code = response.status_code;

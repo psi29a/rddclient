@@ -96,7 +96,7 @@ impl NfsnClient {
         let status = response.status_code;
         let body = response.as_str()?.to_string();
         
-        if status >= 200 && status < 300 {
+        if (200..300).contains(&status) {
             Ok(body)
         } else {
             // Try to parse error JSON

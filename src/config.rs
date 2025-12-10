@@ -313,6 +313,33 @@ impl DdclientConfig {
     }
 }
 
+/// Parse an interval string (e.g., "30s", "5m", "2h", "25d") into seconds
+pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
+    let interval = interval.trim();
+    if interval.is_empty() {
+        return Err("Interval cannot be empty".into());
+    }
+
+    let (num_str, unit) = if let Some(pos) = interval.find(|c: char| !c.is_ascii_digit()) {
+        (&interval[..pos], &interval[pos..])
+    } else {
+        (interval, "s") // Default to seconds if no unit specified
+    };
+
+    let num: u64 = num_str.parse()
+        .map_err(|_| format!("Invalid number in interval: {}", num_str))?;
+
+    let multiplier = match unit.trim() {
+        "s" | "sec" | "seconds" => 1,
+        "m" | "min" | "minutes" => 60,
+        "h" | "hr" | "hours" => 3600,
+        "d" | "day" | "days" => 86400,
+        _ => return Err(format!("Invalid time unit: {}. Use s, m, h, or d", unit).into()),
+    };
+
+    Ok(num * multiplier)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -442,33 +469,4 @@ host2.example.com
         assert!(parse_interval("invalid").is_err());
         assert!(parse_interval("").is_err());
     }
-}
-
-/// Parse interval string (e.g., "30s", "5m", "1h", "25d") to seconds
-/// ddclient-compatible format
-pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
-    if interval.is_empty() {
-        return Err("Interval cannot be empty".into());
-    }
-
-    let interval = interval.trim();
-    let len = interval.len();
-    
-    if len < 2 {
-        return Err(format!("Invalid interval format: '{}'", interval).into());
-    }
-
-    let (num_str, unit) = interval.split_at(len - 1);
-    let num: u64 = num_str.parse()
-        .map_err(|_| format!("Invalid number in interval: '{}'", num_str))?;
-
-    let seconds = match unit {
-        "s" => num,
-        "m" => num * 60,
-        "h" => num * 3600,
-        "d" => num * 86400,
-        _ => return Err(format!("Invalid interval unit '{}'. Use s, m, h, or d", unit).into()),
-    };
-
-    Ok(seconds)
 }

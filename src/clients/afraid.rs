@@ -4,11 +4,16 @@ use sha1::{Digest, Sha1};
 use std::error::Error;
 use std::net::IpAddr;
 
+/// Type alias for Afraid.org record: (hostname, record_type, update_url)
+type AfraidRecord = (String, String, String);
+
 /// Afraid.org (FreeDNS) DNS client using v2 API
+///
 /// Uses two-step process:
 /// 1. Get record list with SHA1(login|password)
 /// 2. Call record-specific update URL
-/// API docs: https://freedns.afraid.org/api/
+///
+/// API docs: <https://freedns.afraid.org/api/>
 pub struct AfraidClient {
     server: String,
     login: String,
@@ -36,8 +41,8 @@ impl AfraidClient {
     }
 
     /// Get list of all records and their update URLs
-    /// Returns map of hostname -> (current_ip, update_url)
-    fn get_record_list(&self) -> Result<Vec<(String, String, String)>, Box<dyn Error>> {
+    /// Returns Vec of (hostname, record_type, update_url)
+    fn get_record_list(&self) -> Result<Vec<AfraidRecord>, Box<dyn Error>> {
         // Step 1: Generate SHA1 hash of "login|password"
         let credentials = format!("{}|{}", self.login, self.password);
         let hash = hex::encode(Sha1::digest(credentials.as_bytes()));
