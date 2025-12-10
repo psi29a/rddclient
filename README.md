@@ -64,7 +64,7 @@ The `dyndns2` provider also works with many other services that support the DynD
 ## Features
 
 - 🚀 **Blazingly fast** - Compiled Rust vs interpreted Perl 
-- 📦 **Tiny binary** - ~1.2MB vs ddclient's 200KB+ Perl script + dependencies
+- 📦 **~Super tiny** - Single < 1MB self-contained binary vs ddclient's ~64MB+ (Perl runtime + core libraries + modules)
 - 🎯 **Drop-in replacement** - Compatible with ddclient config format and workflows
 - 🌍 **Full IPv6 support** - All providers support both A and AAAA records
 - 📝 **Flexible configuration** - ddclient-compatible config files or command-line arguments
