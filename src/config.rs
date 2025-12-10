@@ -332,7 +332,7 @@ pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
     let num: u64 = num_str.parse()
         .map_err(|_| format!("Invalid number in interval: {}", num_str))?;
 
-    let multiplier = match unit.trim() {
+    let multiplier: u64 = match unit.trim() {
         "s" | "sec" | "seconds" => 1,
         "m" | "min" | "minutes" => 60,
         "h" | "hr" | "hours" => 3600,
@@ -340,7 +340,8 @@ pub fn parse_interval(interval: &str) -> Result<u64, Box<dyn Error>> {
         _ => return Err(format!("Invalid time unit: {}. Use s, m, h, or d", unit).into()),
     };
 
-    Ok(num * multiplier)
+    num.checked_mul(multiplier)
+        .ok_or_else(|| "Interval overflow: value too large".into())
 }
 
 #[cfg(test)]
@@ -489,6 +490,12 @@ host2.example.com
         // Large values near u64 max (u64::MAX = 18446744073709551615)
         // Test a reasonably large value that won't overflow
         assert_eq!(parse_interval("1000000d").unwrap(), 86400000000);
+        
+        // Test overflow detection - u64::MAX is 18446744073709551615
+        // u64::MAX / 86400 ≈ 213503982334 days, so anything larger should overflow
+        let result = parse_interval("999999999999999999d");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("overflow"));
         
         // Invalid formats
         assert!(parse_interval("1.5h").is_err()); // decimal not supported

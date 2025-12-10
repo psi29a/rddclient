@@ -13,6 +13,7 @@ pub struct NfsnClient {
     login: String,
     api_key: String,
     zone: String,
+    ttl: u32,
 }
 
 impl NfsnClient {
@@ -32,11 +33,14 @@ impl NfsnClient {
         let server = config.server.clone()
             .unwrap_or_else(|| "https://api.nearlyfreespeech.net".to_string());
 
+        let ttl = config.ttl.unwrap_or(3600);
+
         Ok(NfsnClient {
             server,
             login,
             api_key,
             zone,
+            ttl,
         })
     }
 
@@ -169,10 +173,11 @@ impl DnsClient for NfsnClient {
         log::info!("Adding new {} record: {} -> {}", record_type, name, ip);
         let add_path = format!("/dns/{}/addRR", self.zone);
         let add_body = format!(
-            "name={}&type={}&data={}&ttl=3600",
+            "name={}&type={}&data={}&ttl={}",
             urlencoding::encode(&name),
             record_type,
-            urlencoding::encode(&ip.to_string())
+            urlencoding::encode(&ip.to_string()),
+            self.ttl
         );
         self.make_request(&add_path, "POST", &add_body)?;
         

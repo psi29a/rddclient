@@ -243,7 +243,7 @@ mod tests {
 
 For testing `update_record()` without making real API calls, consider using HTTP mocking libraries. This project currently uses integration-style tests that don't require external dependencies, but you can enhance testing with mocking:
 
-**Option 1: Manual test server (lightweight)**
+##### Option 1: Manual test server (lightweight)
 
 ```rust
 #[cfg(test)]
@@ -282,7 +282,7 @@ mod tests {
 }
 ```
 
-**Option 2: mockito/wiremock crate (full-featured)**
+##### Option 2: mockito/wiremock crate (full-featured)
 
 If you prefer a more robust solution, add a dev-dependency:
 

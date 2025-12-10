@@ -38,6 +38,7 @@ impl DnsClient for RegfishClient {
 
         let response = minreq::get(&url)
             .with_header("User-Agent", crate::USER_AGENT)
+            .with_timeout(30)
             .send()?;
 
         let status_code = response.status_code;
@@ -54,7 +55,7 @@ impl DnsClient for RegfishClient {
             log::info!("Successfully updated {} to {}", hostname, ip);
             Ok(())
         } else if body.starts_with("badauth") {
-            Err("Authentication failed - check username and password".into())
+            Err("Authentication failed - check token".into())
         } else if body.starts_with("notfqdn") {
             Err("Invalid hostname format".into())
         } else if body.starts_with("nohost") {
