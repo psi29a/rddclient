@@ -33,4 +33,4 @@ rand = { version = "0.8", default-features = false, features = ["std", "std_rng"
 [dev-dependencies]
 cross = "0.2.5"
 mockito = "1.7.1"
-tempfile = "3.14"
+tempfile = "3.24"
