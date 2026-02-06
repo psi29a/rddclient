@@ -620,7 +620,7 @@ cargo test -- --nocapture
 1. **Never log credentials**: Don't log passwords, tokens, or API keys
 2. **Use HTTPS**: Default to HTTPS URLs, allow HTTP only if explicitly configured
 3. **Validate inputs**: Sanitize hostnames and other user inputs
-4. **Secure random generation**: Use `rand::thread_rng()` for any random data (like salts)
+4. **Secure random generation**: Use `rand::rng()` with `random_range()` for any random data (like salts)
 5. **Basic Auth in headers**: Don't put credentials in URL parameters when possible
 
 ## Provider-Specific Notes
