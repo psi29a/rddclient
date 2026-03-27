@@ -48,7 +48,7 @@ impl NfsnClient {
     /// Format: login;timestamp;salt;hash
     /// hash = SHA1(login;timestamp;salt;api-key;request-uri;body-hash)
     fn gen_auth_header(&self, path: &str, body: &str) -> String {
-        use rand::Rng;
+        use rand::RngExt;
         
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
