@@ -26,11 +26,10 @@ jobs:
         uses: Swatinem/rust-cache@v2.7.3
       - name: Build for ${{ matrix.target }}
         if: matrix.target != 'x86_64-unknown-linux-gnu'
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          command: build
-          args: --all --release --target=${{ matrix.target }}
+        # ponytail: cross from git; crates.io 0.2.5 (2023) breaks on new toolchains/images
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross --locked
+          cross build --all --release --target=${{ matrix.target }}
       - name: Build for ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cargo build --release --verbose
